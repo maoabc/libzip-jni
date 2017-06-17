@@ -84,7 +84,7 @@ zip_close(zip_t *za)
 	}
 	zip_discard(za);
 	return 0;
-    }	       
+    }
 
     if (!changed) {
 	zip_discard(za);
@@ -95,7 +95,7 @@ zip_close(zip_t *za)
         zip_error_set(&za->error, ZIP_ER_INTERNAL, 0);
         return -1;
     }
-    
+
     if ((filelist=(zip_filelist_t *)malloc(sizeof(filelist[0])*(size_t)survivors)) == NULL)
 	return -1;
 
@@ -109,7 +109,7 @@ zip_close(zip_t *za)
             zip_error_set(&za->error, ZIP_ER_INTERNAL, 0);
             return -1;
         }
-        
+
 	filelist[j].idx = i;
 	j++;
     }
@@ -124,7 +124,7 @@ zip_close(zip_t *za)
 	free(filelist);
 	return -1;
     }
-    
+
     error = 0;
     for (j=0; j<survivors; j++) {
 	int new_data;
@@ -231,7 +231,7 @@ zip_close(zip_t *za)
     }
 
     zip_discard(za);
-    
+
     return 0;
 }
 
@@ -246,7 +246,7 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
     int is_zip64;
     zip_flags_t flags;
     bool needs_recompress, needs_decompress, needs_crc, needs_compress, needs_reencrypt, needs_decrypt, needs_encrypt;
-    
+
     if (zip_source_stat(src, &st) < 0) {
 	_zip_error_set_from_source(&za->error, src);
 	return -1;
@@ -279,7 +279,7 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 	flags |= ZIP_FL_FORCE_ZIP64;
     else {
 	de->uncomp_size = st.size;
-	
+
 	if ((st.valid & ZIP_STAT_COMP_SIZE) == 0) {
 	    if (( ((de->comp_method == ZIP_CM_DEFLATE || ZIP_CM_IS_DEFAULT(de->comp_method)) && st.size > MAX_DEFLATE_SIZE_32)
 		  || (de->comp_method != ZIP_CM_STORE && de->comp_method != ZIP_CM_DEFLATE && !ZIP_CM_IS_DEFAULT(de->comp_method))))
@@ -312,7 +312,7 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 
     if (needs_decrypt) {
 	zip_encryption_implementation impl;
-	
+
 	if ((impl = _zip_get_encryption_implementation(st.encryption_method, ZIP_CODEC_DECODE)) == NULL) {
 	    zip_error_set(&za->error, ZIP_ER_ENCRNOTSUPP, 0);
 	    zip_source_free(src_final);
@@ -327,10 +327,10 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 	zip_source_free(src_final);
 	src_final = src_tmp;
     }
-    
+
     if (needs_decompress) {
 	zip_compression_implementation comp_impl;
-	
+
 	if ((comp_impl = _zip_get_compression_implementation(st.comp_method, ZIP_CODEC_DECODE)) == NULL) {
 	    zip_error_set(&za->error, ZIP_ER_COMPNOTSUPP, 0);
 	    zip_source_free(src_final);
@@ -368,12 +368,12 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 	    zip_source_free(src_final);
 	    return -1;
 	}
-	
+
 	zip_source_free(src_final);
 	src_final = src_tmp;
     }
 
-    
+
     if (needs_encrypt) {
 	zip_encryption_implementation impl;
 	const char *password = NULL;
@@ -383,7 +383,7 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 	} else if (za->default_password) {
 	    password = za->default_password;
 	}
-	
+
 	if ((impl = _zip_get_encryption_implementation(de->encryption_method, ZIP_CODEC_ENCODE)) == NULL) {
 	    zip_error_set(&za->error, ZIP_ER_ENCRNOTSUPP, 0);
 	    zip_source_free(src_final);
@@ -405,7 +405,7 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
     }
 
     ret = copy_source(za, src_final);
-	
+
     if (zip_source_stat(src_final, &st) < 0) {
 	ret = -1;
     }
@@ -443,14 +443,14 @@ add_data(zip_t *za, zip_source_t *src, zip_dirent_t *de)
 
     if ((ret=_zip_dirent_write(za, de, flags)) < 0)
 	return -1;
- 
+
     if (is_zip64 != ret) {
 	/* Zip64 mismatch between preliminary file header written before data and final file header written afterwards */
 	zip_error_set(&za->error, ZIP_ER_INTERNAL, 0);
 	return -1;
     }
 
-   
+
     if (zip_source_seek_write(za->src, offend, SEEK_SET) < 0) {
 	_zip_error_set_from_source(&za->error, za->src);
 	return -1;
@@ -475,7 +475,7 @@ copy_data(zip_t *za, zip_uint64_t len)
 	if (_zip_write(za, buf, n) < 0) {
 	    return -1;
 	}
-	
+
 	len -= n;
     }
 
@@ -502,14 +502,14 @@ copy_source(zip_t *za, zip_source_t *src)
 	    break;
 	}
     }
-    
+
     if (n < 0) {
 	_zip_error_set_from_source(&za->error, src);
 	ret = -1;
     }
 
     zip_source_close(src);
-    
+
     return ret;
 }
 
@@ -518,7 +518,7 @@ static int
 write_cdir(zip_t *za, const zip_filelist_t *filelist, zip_uint64_t survivors)
 {
     zip_int64_t cd_start, end, size;
-    
+
     if ((cd_start = zip_source_tell_write(za->src)) < 0) {
         return -1;
     }
@@ -526,7 +526,7 @@ write_cdir(zip_t *za, const zip_filelist_t *filelist, zip_uint64_t survivors)
     if ((size=_zip_cdir_write(za, filelist, survivors)) < 0) {
 	return -1;
     }
-    
+
     if ((end = zip_source_tell_write(za->src)) < 0) {
         return -1;
     }

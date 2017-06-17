@@ -44,7 +44,6 @@ public class ZipFile implements Closeable {
     }
 
     public ZipFile(String name, String charset, int mode) throws IOException {
-        jzip = open(name, mode);
         if ("UTF-8".equalsIgnoreCase(charset)) {
             coder = ZipCoder.UTF8;
         } else if ("GBK".equalsIgnoreCase(charset)) {
@@ -52,6 +51,7 @@ public class ZipFile implements Closeable {
         } else {
             coder = ZipCoder.get(Charset.forName(charset));
         }
+        jzip = open(name, mode);
         initEntries();
     }
 
@@ -62,7 +62,8 @@ public class ZipFile implements Closeable {
         ZipCoder coder = this.coder;
         for (int i = 0; i < count; i++) {
             ZipEntry zipEntry = getEntry(jzip, i);
-            entries.put(zipEntry.getName(coder), zipEntry);
+            zipEntry.name = coder.toString(zipEntry.rawName);
+            entries.put(zipEntry.name, zipEntry);
         }
     }
 
@@ -170,7 +171,12 @@ public class ZipFile implements Closeable {
 
     @Override
     public void close() throws IOException {
-        close(jzip);
+        close(jzip, new ProgressListener() {
+            @Override
+            public void onProgressing(int progress) {
+                System.out.println("close progress " + progress);
+            }
+        });
         jzip = 0;
         entries.clear();
     }
@@ -260,6 +266,9 @@ public class ZipFile implements Closeable {
     //打开一个zip文件,返回一个zip_t结构体指针
     private static native long open(String name, int mode) throws IOException;
 
+    //设置zip密码
+    private static native void setPassword(long jzip, String password) throws IOException;
+
     //得到zip内文件的数量
     private static native long getEntriesCount(long jzip);
 
@@ -303,7 +312,7 @@ public class ZipFile implements Closeable {
 
 
     //关闭zip文件
-    private static native void close(long jzip) throws IOException;
+    private static native void close(long jzip, ProgressListener progressListener) throws IOException;
 
 
 }

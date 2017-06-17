@@ -1,32 +1,7 @@
-/*
- * Copyright (c) 1995, 2013, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
- */
+
 
 package mao.archive.libzip;
 
-
-import java.util.Arrays;
 
 /**
  * 从java.util.zip.ZipEntry修改来的
@@ -36,21 +11,29 @@ import java.util.Arrays;
  */
 public class ZipEntry {
 
-    protected long index = -1;                 /* index within archive */
+    /* encryption methods */
+    public static final int ZIP_EM_NONE = 0;  /* not encrypted */
+    public static final int ZIP_EM_TRAD_PKWARE = 1; /* traditional PKWARE encryption */
+    public static final int ZIP_EM_AES_128 = 0x0101;  /* Winzip AES encryption */
+    public static final int ZIP_EM_AES_192 = 0x0102;
+    public static final int ZIP_EM_AES_256 = 0x0103;
+    public static final int ZIP_EM_UNKNOWN = 0xffff; /* unknown algorithm */
 
-    private byte[] rawName;        // entry name
-    private String name;
-    private long time;     // last modification time
-    private long crc = -1;      // crc-32 of entry data
-    private long size = -1;     // uncompressed size of entry data
-    private long csize = -1;    // compressed size of entry data
-    private int method = -1;    // compression method
-    private int emethod = -1;     // encryption method
-    private int flag = 0;       // general purpose flag
-    private byte[] extra;       // optional extra field data for entry
-    private String comment;     // optional comment string for entry
 
-    private ZipCoder coder;
+    long index = -1;                 /* index within archive */
+
+    String name;
+    byte[] rawName;        // raw entry name
+    long mtime = -1;     // last modification time
+    long crc = -1;      // crc-32 of entry data
+    long size = -1;     // uncompressed size of entry data
+    long csize = -1;    // compressed size of entry data
+    int method = -1;    // compression method
+    int emethod;
+    int flag;       // general purpose flag
+    byte[] extra;       // optional extra field data for entry
+    String comment;     // optional comment string for entry
+
 
     /**
      * Compression method for uncompressed entries.
@@ -67,6 +50,7 @@ public class ZipEntry {
      * Creates a new un-initialized zip entry
      */
     public ZipEntry() {
+
     }
 
     /**
@@ -78,7 +62,6 @@ public class ZipEntry {
      *                                  0xFFFF bytes
      */
     public ZipEntry(String name) {
-        this.rawName = ZipCoder.UTF8.getBytes(name);
         this.name = name;
     }
 
@@ -94,33 +77,17 @@ public class ZipEntry {
         index = e.index;
         rawName = e.rawName;
         name = e.name;
-        time = e.time;
+        mtime = e.mtime;
         crc = e.crc;
         size = e.size;
         csize = e.csize;
         method = e.method;
+        emethod = e.emethod;
         flag = e.flag;
         extra = e.extra;
         comment = e.comment;
     }
 
-    public int getEmethod() {
-        return emethod;
-    }
-
-
-    /**
-     * Returns the name of the entry.
-     *
-     * @return the name of the entry
-     */
-    public String getName(ZipCoder coder) {
-        if (name == null) {
-            name = coder.toString(rawName);
-            this.coder = coder;
-        }
-        return name;
-    }
 
     /**
      * Returns the name of the entry.
@@ -128,9 +95,6 @@ public class ZipEntry {
      * @return the name of the entry
      */
     public String getName() {
-        if (name == null) {
-            name = (coder == null ? ZipCoder.UTF8 : coder).toString(rawName);
-        }
         return name;
     }
 
@@ -150,7 +114,7 @@ public class ZipEntry {
      * @see #getTime()
      */
     public void setTime(long time) {
-        this.time = time;
+        this.mtime = time / 1000;
     }
 
     /**
@@ -168,7 +132,7 @@ public class ZipEntry {
      * @see #setTime(long)
      */
     public long getTime() {
-        return time * 1000;
+        return mtime != -1 ? mtime * 1000 : -1;
     }
 
 
@@ -273,6 +237,9 @@ public class ZipEntry {
         return method;
     }
 
+    public int getEmethod() {
+        return emethod;
+    }
 
     /**
      * Returns the extra field data for the entry.
@@ -314,34 +281,32 @@ public class ZipEntry {
      * @return true if this is a directory entry
      */
     public boolean isDirectory() {
-        byte[] rawName = this.rawName;
-        return rawName[rawName.length - 1] == '/';
+        return name.endsWith("/");
+    }
+
+
+    /**
+     * 判断是否加密
+     *
+     * @return
+     */
+    public boolean isEncrypted() {
+        return emethod != ZIP_EM_NONE;
     }
 
     /**
      * Returns a string representation of the ZIP entry.
      */
     public String toString() {
-        return getName(ZipCoder.UTF8);
+        return getName();
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof ZipEntry)) {
-            return false;
-        }
-        ZipEntry entry = (ZipEntry) o;
-        return Arrays.equals(this.rawName, entry.rawName);
-    }
 
     /**
      * Returns the hash code value for this entry.
      */
     public int hashCode() {
-        return Arrays.hashCode(rawName);
+        return name.hashCode();
     }
 
 }

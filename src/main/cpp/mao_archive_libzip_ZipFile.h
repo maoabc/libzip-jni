@@ -17,41 +17,13 @@ extern "C" {
 #define mao_archive_libzip_ZipFile_ZIP_TRUNCATE 8L
 #undef mao_archive_libzip_ZipFile_ZIP_RDONLY
 #define mao_archive_libzip_ZipFile_ZIP_RDONLY 16L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_NOCASE
-#define mao_archive_libzip_ZipFile_ZIP_FL_NOCASE 1L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_NODIR
-#define mao_archive_libzip_ZipFile_ZIP_FL_NODIR 2L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_COMPRESSED
-#define mao_archive_libzip_ZipFile_ZIP_FL_COMPRESSED 4L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_UNCHANGED
-#define mao_archive_libzip_ZipFile_ZIP_FL_UNCHANGED 8L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_RECOMPRESS
-#define mao_archive_libzip_ZipFile_ZIP_FL_RECOMPRESS 16L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENCRYPTED
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENCRYPTED 32L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENC_GUESS
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENC_GUESS 0L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENC_RAW
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENC_RAW 64L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENC_STRICT
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENC_STRICT 128L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_LOCAL
-#define mao_archive_libzip_ZipFile_ZIP_FL_LOCAL 256L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_CENTRAL
-#define mao_archive_libzip_ZipFile_ZIP_FL_CENTRAL 512L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENC_UTF_8
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENC_UTF_8 2048L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_ENC_CP437
-#define mao_archive_libzip_ZipFile_ZIP_FL_ENC_CP437 4096L
-#undef mao_archive_libzip_ZipFile_ZIP_FL_OVERWRITE
-#define mao_archive_libzip_ZipFile_ZIP_FL_OVERWRITE 8192L
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    initIDs
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
-        (JNIEnv *, jclass);
+  (JNIEnv *, jclass);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
@@ -59,87 +31,95 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
  * Signature: (Ljava/lang/String;I)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_open
-        (JNIEnv *, jclass, jstring, jint);
+  (JNIEnv *, jclass, jstring, jint);
+
+/*
+ * Class:     mao_archive_libzip_ZipFile
+ * Method:    setPassword
+ * Signature: (JLjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_setPassword
+  (JNIEnv *, jclass, jlong, jstring);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    getEntriesCount
- * Signature: (JI)J
+ * Signature: (J)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_getEntriesCount
-        (JNIEnv *, jclass, jlong);
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    getEntry
- * Signature: (JII)Lmao/archive/libzip/ZipEntry;
+ * Signature: (JJ)Lmao/archive/libzip/ZipEntry;
  */
 JNIEXPORT jobject JNICALL Java_mao_archive_libzip_ZipFile_getEntry
-        (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
- * Method:    deleteEntry
- * Signature: (JI)Z
+ * Method:    removeEntry
+ * Signature: (JJ)Z
  */
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_removeEntry
-        (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    renameEntry
- * Signature: (JILjava/lang/String;)Z
+ * Signature: (JJLjava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_renameEntry
-        (JNIEnv *, jclass, jlong, jlong, jstring);
+  (JNIEnv *, jclass, jlong, jlong, jstring);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addFileEntry
- * Signature: (JLjava/lang/String;Ljava/lang/String;II)Z
+ * Signature: (JLjava/lang/String;Ljava/lang/String;II)V
  */
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_addFileEntry
-        (JNIEnv *, jclass, jlong, jstring, jstring, jint, jint);
+  (JNIEnv *, jclass, jlong, jstring, jstring, jint, jint);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addBufferEntry
- * Signature: (JLjava/lang/String;[BII)Z
+ * Signature: (JLjava/lang/String;[B)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addBufferEntry
-        (JNIEnv *, jclass, jlong, jstring, jbyteArray);
+  (JNIEnv *, jclass, jlong, jstring, jbyteArray);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addDirectoryEntry
- * Signature: (JLjava/lang/String;)Z
+ * Signature: (JLjava/lang/String;)V
  */
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_addDirectoryEntry
-        (JNIEnv *, jclass, jlong, jstring);
+  (JNIEnv *, jclass, jlong, jstring);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    openEntry
- * Signature: (JI)J
+ * Signature: (JJ)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_openEntry
-        (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
- * Method:    getEntryBytes
- * Signature: (J[BII)I
+ * Method:    readEntryBytes
+ * Signature: (J[BII)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_readEntryBytes
-        (JNIEnv *, jclass, jlong, jbyteArray, jint, jint);
+  (JNIEnv *, jclass, jlong, jbyteArray, jint, jint);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
- * Method:    getEntryBuffer
+ * Method:    readEntryBuffer
  * Signature: (JLjava/nio/ByteBuffer;I)I
  */
 JNIEXPORT jint JNICALL Java_mao_archive_libzip_ZipFile_readEntryBuffer
-        (JNIEnv *, jclass, jlong, jobject, jint);
+  (JNIEnv *, jclass, jlong, jobject, jint);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
@@ -147,15 +127,15 @@ JNIEXPORT jint JNICALL Java_mao_archive_libzip_ZipFile_readEntryBuffer
  * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
-        (JNIEnv *, jclass, jlong);
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    close
- * Signature: (J)V
+ * Signature: (JLmao/archive/libzip/ProgressListener;)V
  */
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
-        (JNIEnv *, jclass, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 #ifdef __cplusplus
 }

@@ -17,7 +17,7 @@
 
 static jfieldID zip_entry_index_id;
 static jfieldID zip_entry_name_bytes_id;
-static jfieldID zip_entry_time_id;
+static jfieldID zip_entry_mtime_id;
 static jfieldID zip_entry_crc_id;
 static jfieldID zip_entry_size_id;
 static jfieldID zip_entry_csize_id;
@@ -33,7 +33,7 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
     jclass zip_entry_cls = (*env)->FindClass(env, "mao/archive/libzip/ZipEntry");
     zip_entry_index_id = (*env)->GetFieldID(env, zip_entry_cls, "index", "J");
     zip_entry_name_bytes_id = (*env)->GetFieldID(env, zip_entry_cls, "rawName", "[B");
-    zip_entry_time_id = (*env)->GetFieldID(env, zip_entry_cls, "time", "J");
+    zip_entry_mtime_id = (*env)->GetFieldID(env, zip_entry_cls, "mtime", "J");
     zip_entry_crc_id = (*env)->GetFieldID(env, zip_entry_cls, "crc", "J");
     zip_entry_size_id = (*env)->GetFieldID(env, zip_entry_cls, "size", "J");
     zip_entry_csize_id = (*env)->GetFieldID(env, zip_entry_cls, "csize", "J");
@@ -106,7 +106,7 @@ JNIEXPORT jobject JNICALL Java_mao_archive_libzip_ZipFile_getEntry
 
     (*env)->SetLongField(env, entry, zip_entry_index_id, index);
 
-    (*env)->SetLongField(env, entry, zip_entry_time_id, stat.mtime );
+    (*env)->SetLongField(env, entry, zip_entry_mtime_id, stat.mtime);
 
     (*env)->SetLongField(env, entry, zip_entry_crc_id, stat.crc);
 
@@ -299,23 +299,43 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
         (JNIEnv *env, jclass cls, jlong jzf) {
     zip_file_t *zf = jlong_to_ptr(jzf);
     if (zip_fclose(zf) != 0) {
-        JNU_ThrowIOException(env, "ZipFile close error!");
+        JNU_ThrowIOException(env, "ZipFile close error");
     }
 }
 
+static JNIEnv *g_env = NULL;
+static jobject g_listener = NULL;
+static jmethodID progress_method_id = NULL;
+
+static void progress_callback(double progress) {
+//    LOGE("progress %f\n", progress);
+    if (g_env != NULL && g_listener != NULL && progress_method_id != NULL) {
+        (*g_env)->CallVoidMethod(g_env, g_listener, progress_method_id, (int) (progress * 100));
+    }
+
+}
+
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
-        (JNIEnv *env, jclass cls, jlong jzip) {
+        (JNIEnv *env, jclass cls, jlong jzip, jobject listener) {
     zip_t *za = jlong_to_ptr(jzip);
+    if (listener != NULL) {
+        g_listener = listener;
+        if (progress_method_id == NULL) {
+            jclass listener_cls = (*env)->GetObjectClass(env, listener);
+            progress_method_id = (*env)->GetMethodID(env, listener_cls, "onProgressing", "(I)V");
+            (*env)->DeleteLocalRef(env, listener_cls);
+            if ((*env)->ExceptionCheck(env)) {
+                return;
+            }
+        }
+        if (g_env == NULL) {
+            g_env = env;
+        }
+        zip_register_progress_callback(za, progress_callback);
+    }
     if (zip_close(za) < 0) {
         JNU_ThrowIOException(env, zip_strerror(za));
     }
-//    jsize len = (*env)->GetArrayLength(env, buffersPtr);
-
-//    jlong *ptrs = (*env)->GetLongArrayElements(env, buffersPtr, 0);
-//    for (int i = 0; i < len; ++i) {
-//        char *buff = jlong_to_ptr(*ptrs++);
-//        free(buff);
-//    }
 }
 
 

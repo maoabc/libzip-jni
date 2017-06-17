@@ -1,5 +1,4 @@
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CONFIG_H")
 include_directories("lib")
 
 set(LIBZIP_SOURCES
@@ -116,6 +115,8 @@ set(LIBZIP_OPSYS_FILES
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/gladman-fcrypt
   )
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CONFIG_H")
 
 #add_library(zip SHARED ${LIBZIP_SOURCES}  ${LIBZIP_OPSYS_FILES})
 #set_target_properties(zip PROPERTIES VERSION 3.0 SOVERSION 3 )
