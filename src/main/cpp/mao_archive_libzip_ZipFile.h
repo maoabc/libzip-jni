@@ -51,11 +51,19 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_getEntriesCount
 
 /*
  * Class:     mao_archive_libzip_ZipFile
- * Method:    getEntry
+ * Method:    getEntry0
  * Signature: (JJ)Lmao/archive/libzip/ZipEntry;
  */
-JNIEXPORT jobject JNICALL Java_mao_archive_libzip_ZipFile_getEntry
+JNIEXPORT jobject JNICALL Java_mao_archive_libzip_ZipFile_getEntry0
   (JNIEnv *, jclass, jlong, jlong);
+
+/*
+ * Class:     mao_archive_libzip_ZipFile
+ * Method:    getEntry1
+ * Signature: (J[B)Lmao/archive/libzip/ZipEntry;
+ */
+JNIEXPORT jobject JNICALL Java_mao_archive_libzip_ZipFile_getEntry1
+  (JNIEnv *, jclass, jlong, jbyteArray);
 
 /*
  * Class:     mao_archive_libzip_ZipFile

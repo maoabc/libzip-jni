@@ -6,10 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.ZipException;
 
 /**
  * Created by mao on 16-10-30.
@@ -28,12 +29,14 @@ public class ZipFile implements Closeable {
         initIDs();
     }
 
+    private volatile boolean closeRequested;
     private long jzip;
 
-    private Map<String, ZipEntry> entries = new HashMap<>();
+    private Map<String, ZipEntry> entries;
 
+    private final ZipCoder zc;
 
-    private final ZipCoder coder;
+    private ProgressListener listener;
 
     public ZipFile(String name) throws IOException {
         this(name, "UTF-8", ZIP_CREATE);
@@ -44,45 +47,43 @@ public class ZipFile implements Closeable {
     }
 
     public ZipFile(String name, String charset, int mode) throws IOException {
-        if ("UTF-8".equalsIgnoreCase(charset)) {
-            coder = ZipCoder.UTF8;
-        } else if ("GBK".equalsIgnoreCase(charset)) {
-            coder = ZipCoder.GBK;
-        } else {
-            coder = ZipCoder.get(Charset.forName(charset));
-        }
+        zc = ZipCoder.get(Charset.forName(charset));
         jzip = open(name, mode);
         initEntries();
     }
 
     private void initEntries() throws IOException {
-        int count = getEntriesCount();
+        ensureOpen();
+        int count = (int) getEntriesCount(jzip);
         long jzip = this.jzip;
-        Map<String, ZipEntry> entries = this.entries;
-        ZipCoder coder = this.coder;
+        Map<String, ZipEntry> entries = new HashMap<>();
+        ZipCoder zc = this.zc;
         for (int i = 0; i < count; i++) {
-            ZipEntry zipEntry = getEntry(jzip, i);
-            zipEntry.name = coder.toString(zipEntry.rawName);
-            entries.put(zipEntry.name, zipEntry);
+            ZipEntry zipEntry = getEntry0(jzip, i);
+            String name = zc.toString(zipEntry.rawName);
+            zipEntry.name = name;
+            entries.put(name, zipEntry);
         }
+        this.entries = entries;
     }
 
 
-    private int getEntriesCount() {
-        checkInit();
-        return (int) getEntriesCount(jzip);
-    }
-
-    public Collection<ZipEntry> getEntryValues() {
+    public Iterable<ZipEntry> entries() {
+        if (entries == null) {
+            return Collections.emptyList();
+        }
         return entries.values();
     }
 
-    public Set<Map.Entry<String, ZipEntry>> getEntries() {
+    public Set<Map.Entry<String, ZipEntry>> entrySet() {
+        if (entries == null) {
+            return Collections.emptySet();
+        }
         return entries.entrySet();
     }
 
     public boolean hasEntry(String name) {
-        return entries.containsKey(name);
+        return entries != null && entries.containsKey(name);
     }
 
 
@@ -90,64 +91,57 @@ public class ZipFile implements Closeable {
         if (name == null) {
             throw new NullPointerException("name==null");
         }
+        if (entries == null) {
+            return null;
+        }
         return entries.get(name);
     }
 
 
-    public boolean renameZipEntry(ZipEntry entry, String newName) {
-        checkInit();
+    public synchronized boolean renameZipEntry(ZipEntry entry, String newName) {
+        ensureOpen();
         return renameEntry(jzip, entry.index, newName);
     }
 
     private boolean removeEntry(long index) {
-        checkInit();
+        ensureOpen();
         return removeEntry(jzip, index);
     }
 
-    public boolean removeEntry(ZipEntry entry) {
+    public synchronized boolean removeEntry(ZipEntry entry) {
         return removeEntry(entry.index);
     }
 
-    public boolean removeEntry(String name) {
+    public synchronized boolean removeEntry(String name) {
         ZipEntry entry = entries.get(name);
         return entry != null && removeEntry(entry.index);
     }
 
-    public boolean addFileEntry(String name, File file) {
-        checkInit();
-        try {
-            addFileEntry(jzip, name, file.getAbsolutePath(), 0, (int) file.length());
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
+    public synchronized void addFileEntry(String name, File file) throws IOException {
+        ensureOpen();
+        addFileEntry(jzip, name, file.getAbsolutePath(), 0, (int) file.length());
     }
 
-    public boolean addFileEntry(String entryName, String fileName, int off, int len) {
-        checkInit();
-        try {
-            addFileEntry(jzip, entryName, fileName, off, len);
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
+    public synchronized void addFileEntry(String entryName, String fileName, int off, int len) throws IOException {
+        ensureOpen();
+        addFileEntry(jzip, entryName, fileName, off, len);
     }
 
-    public void addBufferEntry(String name, byte[] buf) throws IOException {
-        checkInit();
+    public synchronized void addBufferEntry(String name, byte[] buf) throws IOException {
+        ensureOpen();
 
         addBufferEntry(jzip, name, buf);
     }
 
 
-    public boolean addDirectoryEntry(String name) {
-        checkInit();
-        try {
-            addDirectoryEntry(jzip, name);
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
+    public synchronized void addDirectoryEntry(String name) throws IOException {
+        ensureOpen();
+        addDirectoryEntry(jzip, name);
+    }
+
+    public void setPassword(String password) {
+        ensureOpen();
+        setPassword(jzip, password);
     }
 
 
@@ -155,30 +149,46 @@ public class ZipFile implements Closeable {
         if (entry == null) {
             throw new NullPointerException("entry");
         }
+        ensureOpen();
 
-        if (jzip == 0) {
-            throw new IllegalStateException("The object is not initialized.");
-        }
         long jzf = openEntry(jzip, entry.index);
         return new ZipFileInputStream(jzf, entry.getSize());
     }
 
-    private void checkInit() {
+
+    private void ensureOpen() {
+        if (closeRequested) {
+            throw new IllegalStateException("zip file closed");
+        }
+
         if (jzip == 0) {
             throw new IllegalStateException("The object is not initialized.");
+        }
+    }
+
+    private void ensureOpenOrZipException() throws IOException {
+        if (closeRequested) {
+            throw new ZipException("ZipFile closed");
         }
     }
 
     @Override
     public void close() throws IOException {
-        close(jzip, new ProgressListener() {
-            @Override
-            public void onProgressing(int progress) {
-                System.out.println("close progress " + progress);
-            }
-        });
+        close(listener);
+        listener = null;
+    }
+
+    private void close(ProgressListener listener) throws IOException {
+        if (closeRequested)
+            return;
+        closeRequested = true;
+        close(jzip, listener);
         jzip = 0;
-        entries.clear();
+        entries = null;
+    }
+
+    public void setProgressListener(ProgressListener listener) {
+        this.listener = listener;
     }
 
     private class ZipFileInputStream extends InputStream {
@@ -193,20 +203,21 @@ public class ZipFile implements Closeable {
         }
 
         public int read(byte b[], int off, int len) throws IOException {
-            if (rem == 0) {
-                return -1;
-            }
-            if (len <= 0) {
-                return 0;
-            }
-            if (len > rem) {
-                len = (int) rem;
-            }
             synchronized (ZipFile.this) {
+                if (rem == 0) {
+                    return -1;
+                }
+                if (len <= 0) {
+                    return 0;
+                }
+                if (len > rem) {
+                    len = (int) rem;
+                }
+                ensureOpenOrZipException();
                 len = (int) ZipFile.readEntryBytes(jzf, b, off, len);
-            }
-            if (len > 0) {
-                rem -= len;
+                if (len > 0) {
+                    rem -= len;
+                }
             }
             if (rem == 0) {
                 close();
@@ -260,6 +271,11 @@ public class ZipFile implements Closeable {
         }
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        close(null);
+    }
+
     //初始化一些数据
     private static native void initIDs();
 
@@ -267,13 +283,16 @@ public class ZipFile implements Closeable {
     private static native long open(String name, int mode) throws IOException;
 
     //设置zip密码
-    private static native void setPassword(long jzip, String password) throws IOException;
+    private static native void setPassword(long jzip, String password);
 
     //得到zip内文件的数量
     private static native long getEntriesCount(long jzip);
 
-    //得到一个zipEntry对象
-    private static native ZipEntry getEntry(long jzip, long index) throws IOException;
+    //根据索引得到一个zipEntry对象
+    private static native ZipEntry getEntry0(long jzip, long index) throws IOException;
+
+    //根据name得到一个zipEntry对象
+    private static native ZipEntry getEntry1(long jzip, byte[] rawName) throws IOException;
 
 
     //删除zip中一个文件

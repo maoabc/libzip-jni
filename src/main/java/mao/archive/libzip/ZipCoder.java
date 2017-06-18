@@ -40,8 +40,6 @@ import java.util.Arrays;
  */
 
 final class ZipCoder {
-    static final ZipCoder UTF8 = ZipCoder.get(Charset.forName("UTF-8"));
-    static final ZipCoder GBK = ZipCoder.get(Charset.forName("GBK"));
 
     String toString(byte[] ba, int length) {
         CharsetDecoder cd = decoder().reset();
