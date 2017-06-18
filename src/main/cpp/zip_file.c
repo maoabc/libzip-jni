@@ -8,6 +8,7 @@
 #include "jni_util.h"
 #include "jlong.h"
 #include "lib/zip.h"
+#include "lib/zipint.h"
 #include <android/log.h>
 
 #define  LOG_TAG    "libzip_jni"
@@ -384,8 +385,9 @@ JNIEXPORT jint JNICALL Java_mao_archive_libzip_ZipFile_readEntryBuffer
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
         (JNIEnv *env, jclass cls, jlong jzf) {
     zip_file_t *zf = jlong_to_ptr(jzf);
-    if (zip_fclose(zf) != 0) {
-        JNU_ThrowIOException(env, "ZipFile close error");
+    if (zip_fclose(zf) ) {
+        LOGE("%d %d",zf->error.zip_err,zf->error.sys_err);
+        JNU_ThrowIOException(env, "zip entry close error");
     }
 }
 
