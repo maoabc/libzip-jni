@@ -150,8 +150,10 @@ public class ZipFile implements Closeable {
             throw new NullPointerException("entry");
         }
         ensureOpen();
-
-        long jzf = openEntry(jzip, entry.index);
+        long jzf ;
+        synchronized (this) {
+            jzf = openEntry(jzip, entry.index);
+        }
         return new ZipFileInputStream(jzf, entry.getSize());
     }
 

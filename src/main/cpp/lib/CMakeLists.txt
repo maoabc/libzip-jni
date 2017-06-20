@@ -33,6 +33,7 @@ set(LIBZIP_SOURCES
   zip_file_rename.c
   zip_file_replace.c
   zip_file_set_comment.c
+  zip_file_set_encryption.c
   zip_file_set_external_attributes.c
   zip_file_set_mtime.c
   zip_file_strerror.c
