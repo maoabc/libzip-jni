@@ -4,12 +4,8 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.Iterator;
 import java.util.zip.ZipException;
 
 /**
@@ -17,11 +13,12 @@ import java.util.zip.ZipException;
  */
 public class ZipFile implements Closeable {
 
-    public static final int ZIP_CREATE = 1;
-    public static final int ZIP_EXCL = 2;
-    public static final int ZIP_CHECKCONS = 4;
-    public static final int ZIP_TRUNCATE = 8;
-    public static final int ZIP_RDONLY = 16;
+    /*file open mode*/
+    public static final int ZIP_CREATE = 1;       //Create the archive if it does not exist.
+    public static final int ZIP_EXCL = 2;         //Error if archive already exists.
+    public static final int ZIP_CHECKCONS = 4;    //Perform additional stricter consistency checks on the archive, and error if they fail.
+    public static final int ZIP_TRUNCATE = 8;     //If archive exists, ignore its current contents.  In other words, handle it the same way as an empty archive.
+    public static final int ZIP_RDONLY = 16;      //Open archive in read-only mode.
 
 
     static {
@@ -31,59 +28,129 @@ public class ZipFile implements Closeable {
 
     private volatile boolean closeRequested;
     private long jzip;
+    private final String name;
 
-    private Map<String, ZipEntry> entries;
 
     private final ZipCoder zc;
 
     private ProgressListener listener;
+    private String password;
+    /*the compression method*/
+    private int compressionMethod = ZipEntry.ZIP_CM_DEFAULT;
+
+    /*the encryption method*/
+    private int encryptionMethod = ZipEntry.ZIP_EM_NONE;
 
     public ZipFile(String name) throws IOException {
-        this(name, "UTF-8", ZIP_CREATE);
+        this(name, Charset.forName("UTF-8"), ZIP_CREATE);
     }
 
     public ZipFile(File archive, String charset) throws IOException {
-        this(archive.getAbsolutePath(), charset, ZIP_CREATE);
+        this(archive.getAbsolutePath(), Charset.forName(charset), ZIP_CREATE);
     }
 
-    public ZipFile(String name, String charset, int mode) throws IOException {
-        zc = ZipCoder.get(Charset.forName(charset));
+    public ZipFile(File archive, Charset charset, int mode) throws IOException {
+
+        if (charset == null)
+            throw new NullPointerException("charset is null");
+        zc = ZipCoder.get(charset);
+        String path = archive.getPath();
+        jzip = open(path, mode);
+        this.name = path;
+    }
+
+    public ZipFile(String name, Charset charset, int mode) throws IOException {
+
+        if (charset == null)
+            throw new NullPointerException("charset is null");
+        zc = ZipCoder.get(charset);
         jzip = open(name, mode);
-        initEntries();
+        this.name = name;
     }
 
-    private void initEntries() throws IOException {
-        ensureOpen();
-        int count = (int) getEntriesCount(jzip);
-        long jzip = this.jzip;
-        Map<String, ZipEntry> entries = new HashMap<>();
-        ZipCoder zc = this.zc;
-        for (int i = 0; i < count; i++) {
-            ZipEntry zipEntry = getEntry0(jzip, i);
-            String name = zc.toString(zipEntry.rawName);
-            zipEntry.name = name;
-            entries.put(name, zipEntry);
+    public String getName() {
+        return name;
+    }
+
+    public ZipEntry getEntry(long index) {
+        if (index == -1) {
+            throw new IllegalArgumentException("index == -1");
         }
-        this.entries = entries;
+        synchronized (this) {
+            ensureOpen();
+            long jstat = openEntryStat(jzip, index);
+            if (jstat != 0) {
+                ZipEntry entry = getZipEntry(null, jstat);
+                entry.index = index;
+                freeEntryStat(jstat);
+                byte[] comment = getEntryComment(jzip, index);
+                if (comment == null) {
+                    entry.comment = null;
+                } else {
+                    entry.comment = zc.toString(comment);
+                }
+                return entry;
+            }
+        }
+        return null;
     }
 
+    private ZipEntry getZipEntry(String name, long jstat) {
+        ZipEntry e = new ZipEntry();
+        if (name != null) {
+            e.name = name;
+        } else {
+            byte[] rawName = getEntryName(jstat);
+            e.name = zc.toString(rawName);
+        }
+        e.mtime = getEntryMTime(jstat) * 1000;
+        e.csize = getEntryCSize(jstat);
+        e.size = getEntrySize(jstat);
+        e.crc = getEntryCrc(jstat);
+        e.method = getEntryMethod(jstat);
+        e.emethod = getEntryEncryptionMethod(jstat);
+        e.flags = getEntryFlags(jstat);
+        return e;
+    }
 
     public Iterable<ZipEntry> entries() {
-        if (entries == null) {
-            return Collections.emptyList();
+        synchronized (this) {
+            ensureOpen();
+            long num = getEntriesCount(jzip);
+            return new IterEntry(num);
         }
-        return entries.values();
     }
 
-    public Set<Map.Entry<String, ZipEntry>> entrySet() {
-        if (entries == null) {
-            return Collections.emptySet();
+    private class IterEntry implements Iterable<ZipEntry> {
+        private long index = 0;
+        private long nums;
+
+        public IterEntry(long nums) {
+            this.nums = nums;
         }
-        return entries.entrySet();
+
+        @Override
+        public Iterator<ZipEntry> iterator() {
+            return new Iterator<ZipEntry>() {
+                @Override
+                public boolean hasNext() {
+                    return index < nums;
+                }
+
+                @Override
+                public ZipEntry next() {
+                    return getEntry(index++);
+                }
+            };
+        }
     }
 
     public boolean hasEntry(String name) {
-        return entries != null && entries.containsKey(name);
+        synchronized (this) {
+            ensureOpen();
+            long index = nameLocate(jzip, zc.getBytes(name));
+            return index != -1;
+        }
     }
 
 
@@ -91,57 +158,177 @@ public class ZipFile implements Closeable {
         if (name == null) {
             throw new NullPointerException("name==null");
         }
-        if (entries == null) {
-            return null;
+        synchronized (this) {
+            ensureOpen();
+            long index = nameLocate(jzip, zc.getBytes(name));
+            if (index == -1) {
+                return null;
+            }
+            long jstat = openEntryStat(jzip, index);
+            if (jstat != 0) {
+                ZipEntry entry = getZipEntry(name, jstat);
+                entry.index = index;
+                freeEntryStat(jstat);
+                byte[] comment = getEntryComment(jzip, index);
+                if (comment == null) {
+                    entry.comment = null;
+                } else {
+                    entry.comment = zc.toString(comment);
+                }
+                return entry;
+            }
         }
-        return entries.get(name);
+        return null;
     }
 
 
-    public synchronized boolean renameZipEntry(ZipEntry entry, String newName) {
-        ensureOpen();
-        return renameEntry(jzip, entry.index, newName);
+    public boolean renameZipEntry(ZipEntry entry, String newName) {
+        if (renameZipEntry(entry.index, newName)) {
+            entry.name = newName;
+            return true;
+        }
+        return false;
+    }
+
+    public boolean renameZipEntry(long index, String newName) {
+        synchronized (this) {
+            ensureOpen();
+            return renameEntry(jzip, index, newName);
+        }
     }
 
     private boolean removeEntry(long index) {
-        ensureOpen();
-        return removeEntry(jzip, index);
+        synchronized (this) {
+            ensureOpen();
+            return removeEntry(jzip, index);
+        }
     }
 
-    public synchronized boolean removeEntry(ZipEntry entry) {
+    public boolean removeEntry(ZipEntry entry) {
         return removeEntry(entry.index);
     }
 
-    public synchronized boolean removeEntry(String name) {
-        ZipEntry entry = entries.get(name);
-        return entry != null && removeEntry(entry.index);
+    public long nameLocate(String name) {
+        synchronized (this) {
+            ensureOpen();
+            return nameLocate(jzip, zc.getBytes(name));
+        }
     }
 
-    public synchronized void addFileEntry(String name, File file) throws IOException {
-        ensureOpen();
-        addFileEntry(jzip, name, file.getAbsolutePath(), 0, (int) file.length());
+    public boolean removeEntry(String name) {
+        long index = nameLocate(name);
+        return index != -1 && removeEntry(index);
     }
 
-    public synchronized void addFileEntry(String entryName, String fileName, int off, int len) throws IOException {
-        ensureOpen();
-        addFileEntry(jzip, entryName, fileName, off, len);
+    public long addFileEntry(String name, File file) throws IOException {
+        synchronized (this) {
+            ensureOpen();
+            return addFileEntry(jzip, name, file.getAbsolutePath(), 0, file.length());
+        }
     }
 
-    public synchronized void addBufferEntry(String name, byte[] buf) throws IOException {
-        ensureOpen();
+    public long addFileEntry(String entryName, String fileName, int off, int len) throws IOException {
+        synchronized (this) {
+            ensureOpen();
+            return addFileEntry(jzip, entryName, fileName, off, len);
+        }
+    }
 
-        addBufferEntry(jzip, name, buf);
+    public long addBufferEntry(String name, byte[] buf) throws IOException {
+        synchronized (this) {
+            ensureOpen();
+            return addBufferEntry(jzip, name, buf);
+        }
     }
 
 
-    public synchronized void addDirectoryEntry(String name) throws IOException {
-        ensureOpen();
-        addDirectoryEntry(jzip, name);
+    public void addDirectoryEntry(String name) throws IOException {
+        synchronized (this) {
+            ensureOpen();
+            addDirectoryEntry(jzip, name);
+        }
     }
 
+    public boolean setEntryEncryptionMethod(long index, int emethod) {
+        if (index == -1 || (password == null && emethod != ZipEntry.ZIP_EM_NONE)) {
+            throw new IllegalArgumentException("index invalid or do not set password");
+        }
+        synchronized (this) {
+            ensureOpen();
+            return setEntryEncryptionMethod(jzip, index, emethod);
+        }
+    }
+
+    public boolean setEntryModifyTime(long index, long time) {
+        if (index == -1) {
+            throw new IllegalArgumentException("index invalid");
+        }
+        synchronized (this) {
+            ensureOpen();
+            return setEntryMTime(jzip, index, time / 1000);
+        }
+    }
+
+    public boolean setEntryMethod(long index, int method) {
+        if (method != ZipEntry.ZIP_CM_DEFAULT && method != ZipEntry.ZIP_CM_DEFLATE && method != ZipEntry.ZIP_CM_STORE) {
+            throw new IllegalArgumentException("invalid compression method");
+        }
+        synchronized (this) {
+            ensureOpen();
+            return setEntryMethod(jzip, index, method);
+        }
+    }
+
+    public boolean setEntryComment(long index, String comment) {
+        if (comment == null) {
+            throw new NullPointerException("comment");
+        }
+        synchronized (this) {
+            ensureOpen();
+            return setEntryComment(jzip, index, zc.getBytesUTF8(comment));
+        }
+
+    }
+
+
+    /**
+     * Sets the default password used when accessing encrypted files
+     *
+     * @param password
+     */
     public void setPassword(String password) {
-        ensureOpen();
-        setPassword(jzip, password);
+        this.password = password;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getComment() {
+        synchronized (this) {
+            ensureOpen();
+            byte[] comment = getComment(jzip);
+            if (comment != null) {
+                return zc.toString(comment);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Sets the comment for the entire zip archive
+     *
+     * @param comment
+     * @return
+     */
+    public boolean setComment(String comment) {
+        if (comment == null || "".equals(comment)) {
+            return false;
+        }
+        synchronized (this) {
+            ensureOpen();
+            return setComment(jzip, zc.getBytesUTF8(comment));
+        }
     }
 
 
@@ -149,10 +336,22 @@ public class ZipFile implements Closeable {
         if (entry == null) {
             throw new NullPointerException("entry");
         }
-        ensureOpen();
-        long jzf ;
+        long jzf;
         synchronized (this) {
-            jzf = openEntry(jzip, entry.index);
+            ensureOpen();
+            jzf = openEntry(jzip, entry.index, password);
+        }
+        return new ZipFileInputStream(jzf, entry.getSize());
+    }
+
+    public InputStream getInputStream(ZipEntry entry, String password) throws IOException {
+        if (entry == null) {
+            throw new NullPointerException("entry");
+        }
+        long jzf;
+        synchronized (this) {
+            ensureOpen();
+            jzf = openEntry(jzip, entry.index, password);
         }
         return new ZipFileInputStream(jzf, entry.getSize());
     }
@@ -186,7 +385,6 @@ public class ZipFile implements Closeable {
         closeRequested = true;
         close(jzip, listener);
         jzip = 0;
-        entries = null;
     }
 
     public void setProgressListener(ProgressListener listener) {
@@ -281,58 +479,148 @@ public class ZipFile implements Closeable {
     //初始化一些数据
     private static native void initIDs();
 
-    //打开一个zip文件,返回一个zip_t结构体指针
-    private static native long open(String name, int mode) throws IOException;
-
-    //设置zip密码
-    private static native void setPassword(long jzip, String password);
+    /**
+     * Opens the zip archive specified by path and returns a pointer to a struct zip
+     *
+     * @param path zip archive path
+     * @param mode open mode
+     * @return a struct zip pointer
+     * @throws IOException
+     */
+    private static native long open(String path, int mode) throws IOException;
 
     //得到zip内文件的数量
     private static native long getEntriesCount(long jzip);
 
-    //根据索引得到一个zipEntry对象
-    private static native ZipEntry getEntry0(long jzip, long index) throws IOException;
-
-    //根据name得到一个zipEntry对象
-    private static native ZipEntry getEntry1(long jzip, byte[] rawName) throws IOException;
-
-
-    //删除zip中一个文件
+    /**
+     * The file at position index in the zip archive archive is marked as deleted
+     *
+     * @param jzip  specifies the zip archive
+     * @param index index in the zip archive
+     * @return
+     */
     private static native boolean removeEntry(long jzip, long index);
 
 
-    //重命名zip中文件
-    private static native boolean renameEntry(long jzip, long index, String newName);
+    /**
+     * The file at position index in the zip archive archive is renamed to name
+     *
+     * @param jzip  specifies the zip archive
+     * @param index index in the zip archive
+     * @param name  new name
+     * @return
+     */
+    private static native boolean renameEntry(long jzip, long index, String name);
 
-    //添加文件到zip
-    private static native void addFileEntry(long jzip, String name, String fileName, int start, int len) throws IOException;
+
+    /**
+     * Adds a file to a zip archive
+     *
+     * @param jzip     specifies the zip archive
+     * @param name     the file's name in the zip archive
+     * @param fileName file name
+     * @param start    offset start
+     * @param len      read length
+     * @return the index of the new file in the archive
+     * @throws IOException
+     */
+    private static native long addFileEntry(long jzip, String name, String fileName, long start, long len) throws IOException;
 
 
     //添加一个字节数组到zip
+
+    /**
+     * Adds a file to a zip archive
+     *
+     * @param jzip   specifies the zip archive
+     * @param name   the file's name in the zip archive
+     * @param buffer a zip source from the buffer data
+     * @return the index of the new file in the archive
+     * @throws IOException
+     */
     private static native long addBufferEntry(long jzip, String name, byte[] buffer) throws IOException;
 
-    //添加目录到zip
-    private static native void addDirectoryEntry(long jzip, String name) throws IOException;
+
+    /**
+     * Adds a directory to a zip archive.
+     *
+     * @param jzip specifies the zip archive
+     * @param name the directory's name in the zip archive utf-8
+     * @return the index of the new entry in the archive
+     * @throws IOException
+     */
+    private static native long addDirectoryEntry(long jzip, String name) throws IOException;
+
+    /*returns the index of the file named rawName in archive*/
+    private static native long nameLocate(long jzip, byte[] rawName);
+
+    //native struct zip_stat
+    private static native long openEntryStat(long jzip, long index);
+
+    private static native byte[] getEntryName(long jstat);
+
+    private static native long getEntrySize(long jstat);
+
+    private static native long getEntryCSize(long jstat);
+
+    private static native long getEntryMTime(long jstat);
+
+    private static native long getEntryCrc(long jstat);
+
+    private static native int getEntryMethod(long jstat);
+
+    private static native int getEntryEncryptionMethod(long jstat);
+
+    private static native int getEntryFlags(long jstat);
+
+    private static native void freeEntryStat(long jstat);
 
 
-    //打开一个zip内部文件
-    //jzip  zip_t结构体指针
-    private static native long openEntry(long jzip, long index) throws IOException;
+    private static native byte[] getEntryComment(long jzip, long index);
 
-    //从zip内部文件中读取数据
-    //jzf    zip_file_t结构体指针
+    /*Sets zip entry */
+    private static native boolean setEntryMTime(long jzip, long index, long time);
+
+    private static native boolean setEntryEncryptionMethod(long jzip, long index, int emethod);
+
+    private static native boolean setEntryMethod(long jzip, long index, int method);
+
+    private static native boolean setEntryComment(long jzip, long index, byte[] comment);
+
+
+    private static native byte[] getComment(long jzip);
+
+    private static native boolean setComment(long jzip, byte[] comment);
+
+    /**
+     * Opens the file at position index
+     *
+     * @param jzip  specifies the zip archive
+     * @param index index in the zip archive
+     * @return a struct zip_file pointer
+     * @throws IOException
+     */
+    private static native long openEntry(long jzip, long index, String password) throws IOException;
+
+
+    /**
+     * Reads at most len bytes from file into buf,start offset off
+     *
+     * @param jzf specifies the zip archive
+     * @param buf buffer data
+     * @param off offset in buf
+     * @param len bytes len
+     * @return the number of bytes actually read is returned.  Otherwise, -1 is returned
+     * @throws IOException
+     */
     private static native long readEntryBytes(long jzf, byte[] buf, int off, int len) throws IOException;
 
-    // 从zip内部文件中读取数据,大数据使用
-    private static native int readEntryBuffer(long jzf, ByteBuffer buffer, int len) throws IOException;
 
-
-    //关闭zipEntry
-
+    //Closes file in archive and frees the memory allocated for it
     private static native void closeEntry(long jzf) throws IOException;
 
 
-    //关闭zip文件
+    //Closes archive and frees the memory allocated for it
     private static native void close(long jzip, ProgressListener progressListener) throws IOException;
 
 

@@ -19,6 +19,10 @@ public class ZipEntry {
     public static final int ZIP_EM_AES_256 = 0x0103;
     public static final int ZIP_EM_UNKNOWN = 0xffff; /* unknown algorithm */
 
+    public static final int ZIP_CM_DEFAULT = -1; /* better of deflate or store */
+    public static final int ZIP_CM_STORE = 0; /* stored (uncompressed) */
+    public static final int ZIP_CM_DEFLATE = 8; /* deflated */
+
 
     long index = -1;                 /* index within archive */
 
@@ -26,30 +30,19 @@ public class ZipEntry {
     byte[] rawName;        // raw entry name
     long mtime = -1;     // last modification time
     long crc = -1;      // crc-32 of entry data
-    long size = -1;     // uncompressed size of entry data
-    long csize = -1;    // compressed size of entry data
-    int method = -1;    // compression method
-    int emethod;
-    int flag;       // general purpose flag
+    long size;     // uncompressed size of entry data
+    long csize;    // compressed size of entry data
+    int method = ZIP_CM_DEFAULT;    // compression method
+    int emethod = ZIP_EM_NONE;
+    int flags;       // general purpose flags
     byte[] extra;       // optional extra field data for entry
     String comment;     // optional comment string for entry
 
 
     /**
-     * Compression method for uncompressed entries.
-     */
-    public static final int STORED = 0;
-
-    /**
-     * Compression method for compressed (deflated) entries.
-     */
-    public static final int DEFLATED = 8;
-
-
-    /**
      * Creates a new un-initialized zip entry
      */
-    public ZipEntry() {
+    ZipEntry() {
 
     }
 
@@ -63,6 +56,15 @@ public class ZipEntry {
      */
     public ZipEntry(String name) {
         this.name = name;
+    }
+
+    /**
+     * entry是否被层初始化
+     *
+     * @return
+     */
+    public boolean isValid() {
+        return index != -1;
     }
 
 
@@ -83,7 +85,7 @@ public class ZipEntry {
         csize = e.csize;
         method = e.method;
         emethod = e.emethod;
-        flag = e.flag;
+        flags = e.flags;
         extra = e.extra;
         comment = e.comment;
     }
@@ -101,38 +103,24 @@ public class ZipEntry {
 
     /**
      * Sets the last modification time of the entry.
-     * <p>
-     * <p> If the entry is output to a ZIP file or ZIP file formatted
-     * output stream the last modification time set by this method will
-     * be stored into the {@code date and time fields} of the zip file
-     * entry and encoded in standard {@code MS-DOS date and time format}.
-     * The {@link java.util.TimeZone#getDefault() default TimeZone} is
-     * used to convert the epoch time to the MS-DOS data and time.
      *
      * @param time The last modification time of the entry in milliseconds
      *             since the epoch
      * @see #getTime()
      */
     public void setTime(long time) {
-        this.mtime = time / 1000;
+        this.mtime = time;
     }
 
     /**
      * Returns the last modification time of the entry.
-     * <p>
-     * <p> If the entry is read from a ZIP file or ZIP file formatted
-     * input stream, this is the last modification time from the {@code
-     * date and time fields} of the zip file entry. The
-     * {@link java.util.TimeZone#getDefault() default TimeZone} is used
-     * to convert the standard MS-DOS formatted date and time to the
-     * epoch time.
      *
      * @return The last modification time of the entry in milliseconds
      * since the epoch, or -1 if not specified
      * @see #setTime(long)
      */
     public long getTime() {
-        return mtime != -1 ? mtime * 1000 : -1;
+        return mtime;
     }
 
 
@@ -170,43 +158,17 @@ public class ZipEntry {
      * as the uncompressed size of the entry.
      *
      * @return the size of the compressed entry data, or -1 if not known
-     * @see #setCompressedSize(long)
      */
     public long getCompressedSize() {
         return csize;
     }
 
-    /**
-     * Sets the size of the compressed entry data.
-     *
-     * @param csize the compressed size to set to
-     * @see #getCompressedSize()
-     */
-    public void setCompressedSize(long csize) {
-        this.csize = csize;
-    }
-
-    /**
-     * Sets the CRC-32 checksum of the uncompressed entry data.
-     *
-     * @param crc the CRC-32 value
-     * @throws IllegalArgumentException if the specified CRC-32 value is
-     *                                  less than 0 or greater than 0xFFFFFFFF
-     * @see #getCrc()
-     */
-    public void setCrc(long crc) {
-        if (crc < 0 || crc > 0xFFFFFFFFL) {
-            throw new IllegalArgumentException("invalid entry crc-32");
-        }
-        this.crc = crc;
-    }
 
     /**
      * Returns the CRC-32 checksum of the uncompressed entry data.
      *
      * @return the CRC-32 checksum of the uncompressed entry data, or -1 if
      * not known
-     * @see #setCrc(long)
      */
     public long getCrc() {
         return crc;
@@ -221,7 +183,7 @@ public class ZipEntry {
      * @see #getMethod()
      */
     public void setMethod(int method) {
-        if (method != STORED && method != DEFLATED) {
+        if (method != ZIP_CM_DEFAULT && method != ZIP_CM_DEFLATE && method != ZIP_CM_STORE) {
             throw new IllegalArgumentException("invalid compression method");
         }
         this.method = method;
@@ -230,15 +192,36 @@ public class ZipEntry {
     /**
      * Returns the compression method of the entry.
      *
-     * @return the compression method of the entry, or -1 if not specified
      * @see #setMethod(int)
      */
     public int getMethod() {
         return method;
     }
 
+    /**
+     * Returns the encryption method of the entry.
+     *
+     * @see #setMethod(int)
+     */
     public int getEmethod() {
         return emethod;
+    }
+
+    /**
+     * Sets the encryption method of the entry.
+     *
+     * @param emethod the encryption method
+     */
+    public void setEmethod(int emethod) {
+        if (emethod != ZIP_EM_NONE
+                && emethod != ZIP_EM_TRAD_PKWARE
+                && emethod != ZIP_EM_AES_128
+                && emethod != ZIP_EM_AES_192
+                && emethod != ZIP_EM_AES_256
+                ) {
+            throw new IllegalArgumentException("invalid encryption method");
+        }
+        this.emethod = emethod;
     }
 
     /**
@@ -309,4 +292,14 @@ public class ZipEntry {
         return name.hashCode();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ZipEntry zipEntry = (ZipEntry) o;
+
+        return name.equals(zipEntry.name);
+
+    }
 }

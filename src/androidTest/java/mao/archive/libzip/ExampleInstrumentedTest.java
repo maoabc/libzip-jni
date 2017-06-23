@@ -7,7 +7,14 @@ import android.support.test.runner.AndroidJUnit4;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static org.junit.Assert.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Instrumentation test, which will execute on an Android device.
@@ -22,5 +29,54 @@ public class ExampleInstrumentedTest {
         Context appContext = InstrumentationRegistry.getTargetContext();
 
         assertEquals("mao.archive.libzip.test", appContext.getPackageName());
+    }
+
+    @Test
+    public void testGetZipEntry() throws IOException {
+        ZipFile zipFile = new ZipFile("/sdcard/en_test.zip");
+        ZipEntry entry = zipFile.getEntry(0);
+        ZipEntry entry1 = zipFile.getEntry("abc.txt");
+        System.out.println(entry);
+    }
+
+    @Test
+    public void testCreateZip() throws IOException {
+        ZipFile zipFile = new ZipFile("/sdcard/test_create.zip");
+        zipFile.addBufferEntry("abc", "hello world".getBytes());
+        zipFile.close();
+
+    }
+
+    @Test
+    public void testCreateZipFromFile() throws IOException {
+        ZipFile zipFile = new ZipFile("/sdcard/test_create.zip", Charset.forName("UTF-8"), ZipFile.ZIP_TRUNCATE);
+        zipFile.addFileEntry("rarlng.rar", new File("/sdcard/rarlng_android.rar"));
+        zipFile.close();
+    }
+
+    @Test
+    public void testCreateEncryptZip() throws IOException {
+        ZipFile zipFile = new ZipFile("/sdcard/test_create_encrypt.zip");
+        zipFile.setPassword("190512");
+        long idx = zipFile.addBufferEntry("abc", "hello world".getBytes());
+        zipFile.setEntryEncryptionMethod(idx, ZipEntry.ZIP_EM_AES_128);
+        zipFile.close();
+
+    }
+
+    @Test
+    public void testExtractEncryptedFile() throws IOException {
+        ZipFile zipFile = new ZipFile(new File("/sdcard/en23_test.zip"), Charset.forName("UTF-8"), ZipFile.ZIP_RDONLY);
+        zipFile.setPassword("19051203");
+        for (ZipEntry zipEntry : zipFile.entries()) {
+            System.out.println(zipEntry.getName());
+            InputStream inputStream = zipFile.getInputStream(zipEntry);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, "GBK"));
+            String s;
+            while ((s = reader.readLine()) != null) {
+                System.out.println(s);
+            }
+        }
+        zipFile.close();
     }
 }
