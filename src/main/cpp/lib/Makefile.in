@@ -298,7 +298,7 @@ SOURCES = $(libzip_la_SOURCES)
 DIST_SOURCES = $(am__libzip_la_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
-	install-data-recursive install-dvi-recursive \
+	install-child-recursive install-dvi-recursive \
 	install-exec-recursive install-html-recursive \
 	install-info-recursive install-pdf-recursive \
 	install-ps-recursive install-recursive installcheck-recursive \
@@ -1843,11 +1843,11 @@ installdirs-am:
 install: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) install-recursive
 install-exec: install-exec-recursive
-install-data: install-data-recursive
+install-child: install-child-recursive
 uninstall: uninstall-recursive
 
 install-am: all-am
-	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
+	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-child-am
 
 installcheck: installcheck-recursive
 install-strip:
@@ -1896,7 +1896,7 @@ info: info-recursive
 
 info-am:
 
-install-data-am: install-includeHEADERS \
+install-child-am: install-includeHEADERS \
 	install-nodist_libincludeHEADERS
 
 install-dvi: install-dvi-recursive
@@ -1954,7 +1954,7 @@ uninstall-am: uninstall-includeHEADERS uninstall-libLTLIBRARIES \
 	clean-libtool cscopelist-am ctags ctags-am distclean \
 	distclean-compile distclean-generic distclean-libtool \
 	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-data install-data-am install-dvi \
+	install install-am install-child install-child-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-includeHEADERS install-info \
 	install-info-am install-libLTLIBRARIES install-man \

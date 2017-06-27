@@ -49,7 +49,7 @@ public class ExampleInstrumentedTest {
 
     @Test
     public void testCreateZipFromFile() throws IOException {
-        ZipFile zipFile = new ZipFile("/sdcard/test_create.zip", Charset.forName("UTF-8"), ZipFile.ZIP_TRUNCATE);
+        ZipFile zipFile = new ZipFile("/sdcard/test_create.zip", Charset.forName("UTF-8"), ZipFile.ZIP_CREATE);
         zipFile.addFileEntry("rarlng.rar", new File("/sdcard/rarlng_android.rar"));
         zipFile.close();
     }
@@ -76,6 +76,17 @@ public class ExampleInstrumentedTest {
             while ((s = reader.readLine()) != null) {
                 System.out.println(s);
             }
+        }
+        zipFile.close();
+    }
+
+    @Test
+    public void testListEntryCharset() throws IOException {
+        ZipFile zipFile = new ZipFile(new File("/sdcard/Baidu-PCS-SD-SDK-Android-L2-1.0.0.zip"), Charset.forName("UTF-8"), ZipFile.ZIP_RDONLY);
+        String comment = zipFile.getComment();
+        for (ZipEntry zipEntry : zipFile.entries()) {
+            String name = zipEntry.getName();
+            System.out.println(name);
         }
         zipFile.close();
     }

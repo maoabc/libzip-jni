@@ -29,9 +29,10 @@ public class ZipFile implements Closeable {
     private volatile boolean closeRequested;
     private long jzip;
     private final String name;
+    private final String charsetName;
 
 
-    private final ZipCoder zc;
+    private ZipCoder zc;
 
     private ProgressListener listener;
     private String password;
@@ -50,13 +51,7 @@ public class ZipFile implements Closeable {
     }
 
     public ZipFile(File archive, Charset charset, int mode) throws IOException {
-
-        if (charset == null)
-            throw new NullPointerException("charset is null");
-        zc = ZipCoder.get(charset);
-        String path = archive.getPath();
-        jzip = open(path, mode);
-        this.name = path;
+        this(archive.getPath(), charset, mode);
     }
 
     public ZipFile(String name, Charset charset, int mode) throws IOException {
@@ -64,12 +59,17 @@ public class ZipFile implements Closeable {
         if (charset == null)
             throw new NullPointerException("charset is null");
         zc = ZipCoder.get(charset);
+        charsetName = charset.name();
         jzip = open(name, mode);
         this.name = name;
     }
 
     public String getName() {
         return name;
+    }
+
+    public String getCharsetName() {
+        return charsetName;
     }
 
     public ZipEntry getEntry(long index) {
@@ -103,7 +103,8 @@ public class ZipFile implements Closeable {
             byte[] rawName = getEntryName(jstat);
             e.name = zc.toString(rawName);
         }
-        e.mtime = getEntryMTime(jstat) * 1000;
+        long time = getEntryMTime(jstat);
+        e.mtime = time == -1 ? time : time * 1000;
         e.csize = getEntryCSize(jstat);
         e.size = getEntrySize(jstat);
         e.crc = getEntryCrc(jstat);
@@ -193,7 +194,7 @@ public class ZipFile implements Closeable {
     public boolean renameZipEntry(long index, String newName) {
         synchronized (this) {
             ensureOpen();
-            return renameEntry(jzip, index, newName);
+            return renameEntry(jzip, index, zc.getBytes(newName));
         }
     }
 
@@ -223,21 +224,21 @@ public class ZipFile implements Closeable {
     public long addFileEntry(String name, File file) throws IOException {
         synchronized (this) {
             ensureOpen();
-            return addFileEntry(jzip, name, file.getAbsolutePath(), 0, file.length());
+            return addFileEntry(jzip, zc.getBytes(name), file.getAbsolutePath(), 0, file.length());
         }
     }
 
     public long addFileEntry(String entryName, String fileName, int off, int len) throws IOException {
         synchronized (this) {
             ensureOpen();
-            return addFileEntry(jzip, entryName, fileName, off, len);
+            return addFileEntry(jzip, zc.getBytes(entryName), fileName, off, len);
         }
     }
 
     public long addBufferEntry(String name, byte[] buf) throws IOException {
         synchronized (this) {
             ensureOpen();
-            return addBufferEntry(jzip, name, buf);
+            return addBufferEntry(jzip, zc.getBytes(name), buf);
         }
     }
 
@@ -245,7 +246,7 @@ public class ZipFile implements Closeable {
     public void addDirectoryEntry(String name) throws IOException {
         synchronized (this) {
             ensureOpen();
-            addDirectoryEntry(jzip, name);
+            addDirectoryEntry(jzip, zc.getBytes(name));
         }
     }
 
@@ -255,7 +256,7 @@ public class ZipFile implements Closeable {
         }
         synchronized (this) {
             ensureOpen();
-            return setEntryEncryptionMethod(jzip, index, emethod);
+            return setEntryEncryptionMethod(jzip, index, emethod, password);
         }
     }
 
@@ -285,7 +286,7 @@ public class ZipFile implements Closeable {
         }
         synchronized (this) {
             ensureOpen();
-            return setEntryComment(jzip, index, zc.getBytesUTF8(comment));
+            return setEntryComment(jzip, index, zc.getBytes(comment));
         }
 
     }
@@ -327,7 +328,7 @@ public class ZipFile implements Closeable {
         }
         synchronized (this) {
             ensureOpen();
-            return setComment(jzip, zc.getBytesUTF8(comment));
+            return setComment(jzip, zc.getBytes(comment));
         }
     }
 
@@ -510,7 +511,7 @@ public class ZipFile implements Closeable {
      * @param name  new name
      * @return
      */
-    private static native boolean renameEntry(long jzip, long index, String name);
+    private static native boolean renameEntry(long jzip, long index, byte[] name);
 
 
     /**
@@ -524,7 +525,7 @@ public class ZipFile implements Closeable {
      * @return the index of the new file in the archive
      * @throws IOException
      */
-    private static native long addFileEntry(long jzip, String name, String fileName, long start, long len) throws IOException;
+    private static native long addFileEntry(long jzip, byte[] name, String fileName, long start, long len) throws IOException;
 
 
     //添加一个字节数组到zip
@@ -538,18 +539,18 @@ public class ZipFile implements Closeable {
      * @return the index of the new file in the archive
      * @throws IOException
      */
-    private static native long addBufferEntry(long jzip, String name, byte[] buffer) throws IOException;
+    private static native long addBufferEntry(long jzip, byte[] name, byte[] buffer) throws IOException;
 
 
     /**
      * Adds a directory to a zip archive.
      *
      * @param jzip specifies the zip archive
-     * @param name the directory's name in the zip archive utf-8
+     * @param name the directory's name in the zip archive
      * @return the index of the new entry in the archive
      * @throws IOException
      */
-    private static native long addDirectoryEntry(long jzip, String name) throws IOException;
+    private static native long addDirectoryEntry(long jzip, byte[] name) throws IOException;
 
     /*returns the index of the file named rawName in archive*/
     private static native long nameLocate(long jzip, byte[] rawName);
@@ -581,7 +582,7 @@ public class ZipFile implements Closeable {
     /*Sets zip entry */
     private static native boolean setEntryMTime(long jzip, long index, long time);
 
-    private static native boolean setEntryEncryptionMethod(long jzip, long index, int emethod);
+    private static native boolean setEntryEncryptionMethod(long jzip, long index, int emethod, String password);
 
     private static native boolean setEntryMethod(long jzip, long index, int method);
 

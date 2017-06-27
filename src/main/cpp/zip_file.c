@@ -15,9 +15,13 @@
 
 #define MAXNAME 1024
 
+static jmethodID progress_method_id = NULL;
 
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
         (JNIEnv *env, jclass cls) {
+    jclass listener_cls = (*env)->FindClass(env, "mao/archive/libzip/ProgressListener");
+    progress_method_id = (*env)->GetMethodID(env, listener_cls, "onProgressing", "(I)V");
+    (*env)->DeleteLocalRef(env, listener_cls);
 }
 
 
@@ -65,94 +69,143 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_removeEntry
 }
 
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_renameEntry
-        (JNIEnv *env, jclass cls, jlong jzip, jlong index, jstring jname) {
+        (JNIEnv *env, jclass cls, jlong jzip, jlong index, jbyteArray jrawName) {
     zip_t *za = jlong_to_ptr(jzip);
+    jsize ulen = (*env)->GetArrayLength(env, jrawName);
+    char buf[MAXNAME + 2], *newName;
+    if (ulen > MAXNAME) {
+        newName = malloc((size_t) (ulen + 2));
+        if (newName == NULL) {
+            JNU_ThrowOutOfMemoryError(env, 0);
+            return JNI_FALSE;
+        }
+    } else {
+        newName = buf;
+    }
+    (*env)->GetByteArrayRegion(env, jrawName, 0, ulen, (jbyte *) newName);
+    newName[ulen] = '\0';
 
-    const char *name = (*env)->GetStringUTFChars(env, jname, 0);
-    if (zip_file_rename(za, (zip_uint64_t) index, name, ZIP_FL_ENC_UTF_8) < 0) {
+    if (zip_file_rename(za, (zip_uint64_t) index, newName, 0) < 0) {
         LOGE("rename error %s", zip_strerror(za));
         zip_error_clear(za);
-        (*env)->ReleaseStringUTFChars(env, jname, name);
+        if (newName != buf) {
+            free(newName);
+        }
         return JNI_FALSE;
     }
-    (*env)->ReleaseStringUTFChars(env, jname, name);
+    if (newName != buf) {
+        free(newName);
+    }
     return JNI_TRUE;
 
 }
 
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addFileEntry
-        (JNIEnv *env, jclass cls, jlong jzip, jstring jname, jstring jpath, jlong off,
+        (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName, jstring jpath, jlong off,
          jlong len) {
-    const char *path = NULL;
-    const char *name = NULL;
-    zip_source_t *source_t = NULL;
-
     zip_t *za = jlong_to_ptr(jzip);
 
+    jsize ulen = (*env)->GetArrayLength(env, jrawName);
+    char buf[MAXNAME + 2], *rawName;
+    if (ulen > MAXNAME) {
+        rawName = malloc((size_t) (ulen + 2));
+        if (rawName == NULL) {
+            JNU_ThrowOutOfMemoryError(env, 0);
+            return -1;
+        }
+    } else {
+        rawName = buf;
+    }
+    (*env)->GetByteArrayRegion(env, jrawName, 0, ulen, (jbyte *) rawName);
+    rawName[ulen] = '\0';
 
-    path = (*env)->GetStringUTFChars(env, jpath, 0);
-    name = (*env)->GetStringUTFChars(env, jname, 0);
-    if (path == NULL || name == NULL || (*env)->ExceptionCheck(env))
+    const char *path = (*env)->GetStringUTFChars(env, jpath, 0);
+    if (path == NULL || (*env)->ExceptionCheck(env))
         goto err;
 
-    source_t = zip_source_file(za, path, (zip_uint64_t) off, len);
+    zip_source_t *source_t = zip_source_file(za, path, (zip_uint64_t) off, len);
     if (source_t == NULL) {
         goto err;
     }
     zip_int64_t index;
-    if ((index = zip_file_add(za, name, source_t, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8)) < 0) {
+    if ((index = zip_file_add(za, rawName, source_t, ZIP_FL_OVERWRITE)) < 0) {
+        zip_source_free(source_t);
         goto err;
     }
 
 
     done:
+    if (rawName != buf) {
+        free(rawName);
+    }
     (*env)->ReleaseStringUTFChars(env, jpath, path);
-    (*env)->ReleaseStringUTFChars(env, jname, name);
     return index;
 
     err:
+    if (rawName != buf) {
+        free(rawName);
+    }
     (*env)->ReleaseStringUTFChars(env, jpath, path);
-    (*env)->ReleaseStringUTFChars(env, jname, name);
     JNU_ThrowIOException(env, zip_strerror(za));
     zip_error_clear(za);
     return -1;
 }
 
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addBufferEntry
-        (JNIEnv *env, jclass cls, jlong jzip, jstring jname, jbyteArray jbuf) {
-    const char *name = NULL;
-    char *buf = NULL;
-    zip_source_t *zip_source;
+        (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName, jbyteArray jdatabuf) {
     zip_t *za = jlong_to_ptr(jzip);
+    jsize ulen = (*env)->GetArrayLength(env, jrawName);
+    char buf[MAXNAME + 2], *rawName;
 
-    jsize length = (*env)->GetArrayLength(env, jbuf);
+    if (ulen > MAXNAME) {
+        rawName = malloc((size_t) (ulen + 2));
+        if (rawName == NULL) {
+            JNU_ThrowOutOfMemoryError(env, 0);
+            return -1;
+        }
+    } else {
+        rawName = buf;
+    }
+    (*env)->GetByteArrayRegion(env, jrawName, 0, ulen, (jbyte *) rawName);
+    rawName[ulen] = '\0';
+//    LOGI("add buf %s", rawName);
 
+
+    jsize datalen = (*env)->GetArrayLength(env, jdatabuf);
     //释放zip_source时会自动释放buf
-    buf = malloc((size_t) length);
-    if (buf == NULL) {
+    char *databuf = malloc((size_t) datalen);
+    if (databuf == NULL) {
+        if (rawName != buf) {
+            free(rawName);
+        }
         JNU_ThrowOutOfMemoryError(env, "can't malloc memory!");
         return -1;
     }
-    (*env)->GetByteArrayRegion(env, jbuf, 0, length, (jbyte *) buf);
+    (*env)->GetByteArrayRegion(env, jdatabuf, 0, datalen, (jbyte *) databuf);
 
-    name = (*env)->GetStringUTFChars(env, jname, 0);
 
     //关闭整个zip文件时自动释放
-    zip_source = zip_source_buffer(za, buf, (zip_uint64_t) length, 1);
+    zip_source_t *zip_source = zip_source_buffer(za, databuf, (zip_uint64_t) datalen, 1);
     if (zip_source == NULL) {
         goto err;
     }
     zip_int64_t index;
-    if ((index = zip_file_add(za, name, zip_source, ZIP_FL_OVERWRITE | ZIP_FL_ENC_UTF_8)) < 0) {
+    if ((index = zip_file_add(za, rawName, zip_source, ZIP_FL_OVERWRITE)) < 0) {
+        zip_source_free(zip_source);
         goto err;
     }
 
-    (*env)->ReleaseStringUTFChars(env, jname, name);
+    if (rawName != buf) {
+        free(rawName);
+    }
     return index;
 
     err:
-    free(buf);
-    (*env)->ReleaseStringUTFChars(env, jname, name);
+    free(databuf);
+
+    if (rawName != buf) {
+        free(rawName);
+    }
     JNU_ThrowIOException(env, zip_strerror(za));
     zip_error_clear(za);
     return -1;
@@ -160,19 +213,36 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addBufferEntry
 
 
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addDirectoryEntry
-        (JNIEnv *env, jclass cls, jlong jzip, jstring jname) {
+        (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName) {
     zip_t *za = jlong_to_ptr(jzip);
     zip_int64_t index;
+    jsize ulen = (*env)->GetArrayLength(env, jrawName);
+    char buf[MAXNAME + 2], *rawName;
 
-    const char *name = (*env)->GetStringUTFChars(env, jname, 0);
+    if (ulen > MAXNAME) {
+        rawName = malloc((size_t) (ulen + 2));
+        if (rawName == NULL) {
+            JNU_ThrowOutOfMemoryError(env, 0);
+            return -1;
+        }
+    } else {
+        rawName = buf;
+    }
+    (*env)->GetByteArrayRegion(env, jrawName, 0, ulen, (jbyte *) rawName);
+    rawName[ulen] = '\0';
 
-    if ((index = zip_dir_add(za, name, ZIP_FL_ENC_UTF_8)) < 0) {
-        (*env)->ReleaseStringUTFChars(env, jname, name);
+    if ((index = zip_dir_add(za, rawName, 0)) < 0) {
+
+        if (rawName != buf) {
+            free(rawName);
+        }
         JNU_ThrowIOException(env, zip_strerror(za));
         zip_error_clear(za);
         return -1;
     }
-    (*env)->ReleaseStringUTFChars(env, jname, name);
+    if (rawName != buf) {
+        free(rawName);
+    }
     return index;
 }
 
@@ -208,7 +278,7 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_openEntryStat
         (JNIEnv *env, jclass cls, jlong jzip, jlong index) {
     zip_t *za = jlong_to_ptr(jzip);
     zip_stat_t *stat = malloc(sizeof(zip_stat_t));
-    if (zip_stat_index(za, (zip_uint64_t) index, 0, stat) < 0) {
+    if (zip_stat_index(za, (zip_uint64_t) index, ZIP_FL_ENC_RAW, stat) < 0) {
         zip_error_clear(za);
         return 0;
     }
@@ -307,10 +377,20 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setEntryMTime
 }
 
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setEntryEncryptionMethod
-        (JNIEnv *env, jclass cls, jlong jzip, jlong index, jint emethod) {
+        (JNIEnv *env, jclass cls, jlong jzip, jlong index, jint emethod, jstring jpassword) {
     zip_t *za = jlong_to_ptr(jzip);
-    if (zip_file_set_encryption(za, (zip_uint64_t) index, (zip_uint16_t) emethod, NULL) < 0) {
+    const char *passwd = NULL;
+    if (jpassword != NULL && (*env)->GetStringLength(env, jpassword) > 0) {
+        passwd = (*env)->GetStringUTFChars(env, jpassword, 0);
+    }
+    if (zip_file_set_encryption(za, (zip_uint64_t) index, (zip_uint16_t) emethod, passwd) < 0) {
+        if (passwd) {
+            (*env)->ReleaseStringUTFChars(env, jpassword, passwd);
+        }
         return JNI_FALSE;
+    }
+    if (passwd) {
+        (*env)->ReleaseStringUTFChars(env, jpassword, passwd);
     }
     return JNI_TRUE;
 }
@@ -330,7 +410,6 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setEntryComment
     zip_t *za = jlong_to_ptr(jzip);
     char buf[COMMENT_MAX + 2], *comm;
     jsize ulen = (*env)->GetArrayLength(env, comment);
-
     if (ulen > MAXNAME) {
         comm = malloc((size_t) (ulen + 2));
         if (comm == NULL) {
@@ -402,12 +481,9 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setComment
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_openEntry
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jstring password) {
     zip_t *za = jlong_to_ptr(jzip);
-#define MAX_PASSWORD 128
-    char *passwd;
+    char *passwd = NULL;
 
-    if (password == NULL || (*env)->GetStringLength(env, password) == 0) {
-        passwd = NULL;
-    } else {
+    if (password != NULL && (*env)->GetStringLength(env, password) > 0) {
         passwd = (char *) (*env)->GetStringUTFChars(env, password, 0);
     }
 
@@ -446,13 +522,15 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_readEntryBytes
 
     jbyte *buf = (*env)->GetByteArrayElements(env, jbuf, NULL);
     if (buf == NULL || (*env)->ExceptionCheck(env)) {
-        (*env)->ReleaseByteArrayElements(env, jbuf, buf, JNI_ABORT);
+        /*fixed */
+        (*env)->ReleaseByteArrayElements(env, jbuf, buf, 0);
         JNU_ThrowIOException(env, "can't get byte array buffer!");
         return -1;
     }
 
     zip_int64_t len = zip_fread(zf, buf + off, (zip_uint64_t) (jlen - off));
-    (*env)->ReleaseByteArrayElements(env, jbuf, buf, JNI_ABORT);
+    /*fixed */
+    (*env)->ReleaseByteArrayElements(env, jbuf, buf, 0);
     return len;
 
 }
@@ -469,7 +547,6 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
 
 static JNIEnv *g_env = NULL;
 static jobject g_listener = NULL;
-static jmethodID progress_method_id = NULL;
 
 static void progress_callback(double progress) {
 //    LOGE("progress %f\n", progress);
@@ -484,20 +561,9 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
     zip_t *za = jlong_to_ptr(jzip);
     if (listener != NULL) {
         g_listener = listener;
-        if (progress_method_id == NULL) {
-            jclass listener_cls = (*env)->GetObjectClass(env, listener);
-            progress_method_id = (*env)->GetMethodID(env, listener_cls, "onProgressing", "(I)V");
-            (*env)->DeleteLocalRef(env, listener_cls);
-            if ((*env)->ExceptionCheck(env)) {
-                goto done;
-            }
-        }
-        if (g_env == NULL) {
-            g_env = env;
-        }
+        g_env = env;
         zip_register_progress_callback(za, progress_callback);
     }
-    done:
     if (zip_close(za) < 0) {
         JNU_ThrowIOException(env, zip_strerror(za));
     }

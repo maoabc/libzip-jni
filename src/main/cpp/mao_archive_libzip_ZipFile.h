@@ -52,34 +52,34 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_removeEntry
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    renameEntry
- * Signature: (JJLjava/lang/String;)Z
+ * Signature: (JJ[B)Z
  */
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_renameEntry
-  (JNIEnv *, jclass, jlong, jlong, jstring);
+  (JNIEnv *, jclass, jlong, jlong, jbyteArray);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addFileEntry
- * Signature: (JLjava/lang/String;Ljava/lang/String;JJ)J
+ * Signature: (J[BLjava/lang/String;JJ)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addFileEntry
-  (JNIEnv *, jclass, jlong, jstring, jstring, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jbyteArray, jstring, jlong, jlong);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addBufferEntry
- * Signature: (JLjava/lang/String;[B)J
+ * Signature: (J[B[B)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addBufferEntry
-  (JNIEnv *, jclass, jlong, jstring, jbyteArray);
+  (JNIEnv *, jclass, jlong, jbyteArray, jbyteArray);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    addDirectoryEntry
- * Signature: (JLjava/lang/String;)J
+ * Signature: (J[B)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_addDirectoryEntry
-  (JNIEnv *, jclass, jlong, jstring);
+  (JNIEnv *, jclass, jlong, jbyteArray);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
@@ -188,10 +188,10 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setEntryMTime
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    setEntryEncryptionMethod
- * Signature: (JJI)Z
+ * Signature: (JJILjava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setEntryEncryptionMethod
-  (JNIEnv *, jclass, jlong, jlong, jint);
+  (JNIEnv *, jclass, jlong, jlong, jint, jstring);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
@@ -228,10 +228,10 @@ JNIEXPORT jboolean JNICALL Java_mao_archive_libzip_ZipFile_setComment
 /*
  * Class:     mao_archive_libzip_ZipFile
  * Method:    openEntry
- * Signature: (JJ)J
+ * Signature: (JJLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_openEntry
-  (JNIEnv *, jclass, jlong, jlong,jstring);
+  (JNIEnv *, jclass, jlong, jlong, jstring);
 
 /*
  * Class:     mao_archive_libzip_ZipFile
