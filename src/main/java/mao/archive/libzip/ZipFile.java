@@ -32,7 +32,7 @@ public class ZipFile implements Closeable {
     private final String charsetName;
 
 
-    private ZipCoder zc;
+    private final ZipCoder zc;
 
     private ProgressListener listener;
     private String password;
@@ -118,21 +118,21 @@ public class ZipFile implements Closeable {
         synchronized (this) {
             ensureOpen();
             long num = getEntriesCount(jzip);
-            return new IterEntry(num);
+            return new IterEntry((int) num);
         }
     }
 
     private class IterEntry implements Iterable<ZipEntry> {
-        private long index = 0;
-        private long nums;
+        private final int nums;
 
-        public IterEntry(long nums) {
+        IterEntry(int nums) {
             this.nums = nums;
         }
 
         @Override
         public Iterator<ZipEntry> iterator() {
             return new Iterator<ZipEntry>() {
+                private int index = 0;
                 @Override
                 public boolean hasNext() {
                     return index < nums;

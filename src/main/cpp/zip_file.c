@@ -27,19 +27,19 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
 
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_open(JNIEnv *env, jclass cls, jstring jname,
                                                              jint mode) {
-    char errbuf[2048];
+    char errbuf[1024];
     zip_error_t error;
     zip_t *za;
     int err;
     const char *name = (*env)->GetStringUTFChars(env, jname, 0);
     if ((za = zip_open(name, mode, &err)) == NULL) {
-        (*env)->ReleaseStringUTFChars(env, jname, name);
         zip_error_init_with_code(&error, err);
         const char *string = zip_error_strerror(&error);
         sprintf(errbuf, "can't open zip archive '%s': %s\n", name, string);
         zip_error_fini(&error);
         JNU_ThrowIOException(env, errbuf);
-        return 0;
+//        fixed 未知原因,返回0到java时变成0x10,导致ZipFile对象finalize时报错
+//        return ptr_to_jlong(za);
     }
     (*env)->ReleaseStringUTFChars(env, jname, name);
     return ptr_to_jlong(za);
@@ -559,6 +559,10 @@ static void progress_callback(double progress) {
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
         (JNIEnv *env, jclass cls, jlong jzip, jobject listener) {
     zip_t *za = jlong_to_ptr(jzip);
+    LOGE("finalize   ");
+    if (za == NULL) {
+        return;
+    }
     if (listener != NULL) {
         g_listener = listener;
         g_env = env;
