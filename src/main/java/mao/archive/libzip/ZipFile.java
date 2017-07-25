@@ -27,7 +27,7 @@ public class ZipFile implements Closeable {
     }
 
     private volatile boolean closeRequested;
-    private long jzip;
+    private long jzip = 0L;
     private final String name;
     private final String charsetName;
 
@@ -133,6 +133,7 @@ public class ZipFile implements Closeable {
         public Iterator<ZipEntry> iterator() {
             return new Iterator<ZipEntry>() {
                 private int index = 0;
+
                 @Override
                 public boolean hasNext() {
                     return index < nums;
