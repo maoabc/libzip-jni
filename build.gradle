@@ -32,6 +32,13 @@ android {
             path 'src/main/cpp/CMakeLists.txt'
         }
     }
+
+    lintOptions {
+        disable 'TypographyFractions','TypographyQuotes'
+        enable 'RtlHardcoded','RtlCompat', 'RtlEnabled'
+        check 'NewApi', 'InlinedApi'
+        abortOnError false
+    }
 }
 
 dependencies {

@@ -58,7 +58,7 @@ public class ZipEntry {
     }
 
     /**
-     * entry是否被层初始化
+     * entry是否在原zip里
      *
      * @return
      */

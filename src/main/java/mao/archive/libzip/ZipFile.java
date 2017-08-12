@@ -342,8 +342,8 @@ public class ZipFile implements Closeable {
         synchronized (this) {
             ensureOpen();
             jzf = openEntry(jzip, entry.index, password);
+            return new ZipFileInputStream(jzf, entry.getSize());
         }
-        return new ZipFileInputStream(jzf, entry.getSize());
     }
 
     public InputStream getInputStream(ZipEntry entry, String password) throws IOException {
@@ -354,14 +354,14 @@ public class ZipFile implements Closeable {
         synchronized (this) {
             ensureOpen();
             jzf = openEntry(jzip, entry.index, password);
+            return new ZipFileInputStream(jzf, entry.getSize());
         }
-        return new ZipFileInputStream(jzf, entry.getSize());
     }
 
 
     private void ensureOpen() {
         if (closeRequested) {
-            throw new IllegalStateException("zip file closed");
+            throw new IllegalStateException("Zip file closed");
         }
 
         if (jzip == 0) {

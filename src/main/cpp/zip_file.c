@@ -29,7 +29,6 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_initIDs
 
 JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_open(JNIEnv *env, jclass cls, jstring jname,
                                                              jint mode) {
-    char errbuf[1024];
     zip_error_t error;
     zip_t *za;
     int err;
@@ -37,9 +36,8 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_open(JNIEnv *env, jclass
     if ((za = zip_open(name, mode, &err)) == NULL) {
         zip_error_init_with_code(&error, err);
         const char *string = zip_error_strerror(&error);
-        sprintf(errbuf, "can't open zip archive '%s': %s\n", name, string);
         zip_error_fini(&error);
-        JNU_ThrowIOException(env, errbuf);
+        JNU_ThrowIOException(env, string);
 //        fixed 未知原因,返回0到java时变成0x10,导致ZipFile对象finalize时报错
 //        return ptr_to_jlong(za);
     }
@@ -519,8 +517,7 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
         (JNIEnv *env, jclass cls, jlong jzf) {
     zip_file_t *zf = jlong_to_ptr(jzf);
     if (zip_fclose(zf)) {
-        JNU_ThrowIOException(env, zip_error_strerror(&zf->error));
-        zip_file_error_clear(zf);
+        JNU_ThrowIOException(env, "Close error");
     }
 }
 
