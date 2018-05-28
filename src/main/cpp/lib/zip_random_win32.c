@@ -17,7 +17,7 @@
   3. The names of the authors may not be used to endorse or promote
      products derived from this software without specific prior
      written permission.
- 
+
   THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS
   OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -34,9 +34,10 @@
 #include "zipint.h"
 #include "zipwin32.h"
 
-bool
-zip_random(zip_uint8_t *buffer, zip_uint16_t length)
-{
+#include <wincrypt.h>
+
+ZIP_EXTERN bool
+zip_random(zip_uint8_t *buffer, zip_uint16_t length) {
     HCRYPTPROV hprov;
     if (!CryptAcquireContext(&hprov, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT | CRYPT_SILENT)) {
 	return false;

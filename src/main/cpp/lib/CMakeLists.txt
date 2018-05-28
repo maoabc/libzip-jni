@@ -1,11 +1,11 @@
+INCLUDE(CheckFunctionExists)
 
-include_directories("lib")
 
 set(LIBZIP_SOURCES
-  gladman-fcrypt.c
   zip_add.c
   zip_add_dir.c
   zip_add_entry.c
+  zip_algorithm_deflate.c
   zip_buffer.c
   zip_close.c
   zip_delete.c
@@ -44,9 +44,9 @@ set(LIBZIP_SOURCES
   zip_fopen_index_encrypted.c
   zip_fread.c
   zip_fseek.c
+  zip_ftell.c
   zip_get_archive_comment.c
   zip_get_archive_flag.c
-  zip_get_compression_implementation.c
   zip_get_encryption_implementation.c
   zip_get_file_comment.c
   zip_get_name.c
@@ -54,10 +54,12 @@ set(LIBZIP_SOURCES
   zip_get_num_files.c
   zip_hash.c
   zip_io_util.c
+  zip_libzip_version.c
   zip_memdup.c
   zip_name_locate.c
   zip_new.c
   zip_open.c
+  zip_progress.c
   zip_rename.c
   zip_replace.c
   zip_set_archive_comment.c
@@ -67,16 +69,18 @@ set(LIBZIP_SOURCES
   zip_set_file_compression.c
   zip_set_name.c
   zip_source_begin_write.c
+  zip_source_begin_write_cloning.c
   zip_source_buffer.c
   zip_source_call.c
   zip_source_close.c
   zip_source_commit_write.c
+  zip_source_compress.c
   zip_source_crc.c
-  zip_source_deflate.c
   zip_source_error.c
   zip_source_filep.c
   zip_source_free.c
   zip_source_function.c
+  zip_source_get_compression_flags.c
   zip_source_is_deleted.c
   zip_source_layered.c
   zip_source_open.c
@@ -91,8 +95,6 @@ set(LIBZIP_SOURCES
   zip_source_tell.c
   zip_source_tell_write.c
   zip_source_window.c
-  zip_source_winzip_aes_decode.c
-  zip_source_winzip_aes_encode.c
   zip_source_write.c
   zip_source_zip.c
   zip_source_zip_new.c
@@ -109,20 +111,41 @@ set(LIBZIP_SOURCES
 )
 
 set(LIBZIP_OPSYS_FILES
-    zip_random_unix.c
     zip_source_file.c
-  )
+)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/gladman-fcrypt
-  )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DHAVE_CONFIG_H")
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/..)
 
-#add_library(zip SHARED ${LIBZIP_SOURCES}  ${LIBZIP_OPSYS_FILES})
-#set_target_properties(zip PROPERTIES VERSION 3.0 SOVERSION 3 )
-#target_link_libraries(zip ${ZLIB_LIBRARY})
+add_custom_target(update_zip_err_str
+  COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/make_zip_err_str.sh ${CMAKE_CURRENT_SOURCE_DIR}/zip.h ${CMAKE_CURRENT_SOURCE_DIR}/zip_err_str.c
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/zip.h ${CMAKE_CURRENT_SOURCE_DIR}/make_zip_err_str.sh
+)
+check_function_exists(mkstemp HAVE_MKSTEMP)
+if(NOT HAVE_MKSTEMP)
+  set(LIBZIP_EXTRA_FILES mkstemp.c)
+endif(NOT HAVE_MKSTEMP)
+if(HAVE_LIBBZ2)
+  set(LIBZIP_OPTIONAL_FILES zip_algorithm_bzip2.c)
+endif()
 
-add_library(zipstatic STATIC ${LIBZIP_SOURCES} ${LIBZIP_OPSYS_FILES})
-set_target_properties(zipstatic PROPERTIES VERSION 3.0 SOVERSION 3 )
-target_link_libraries(zipstatic ${ZLIB_LIBRARY})
+if(HAVE_COMMONCRYPTO)
+  set(LIBZIP_OPTIONAL_FILES ${LIBZIP_OPTIONAL_FILES} zip_crypto_commoncrypto.c
+)  
+elseif(HAVE_GNUTLS)
+  set(LIBZIP_OPTIONAL_FILES ${LIBZIP_OPTIONAL_FILES} zip_crypto_gnutls.c
+)
+elseif(HAVE_OPENSSL)
+  set(LIBZIP_OPTIONAL_FILES ${LIBZIP_OPTIONAL_FILES} zip_crypto_openssl.c
+)
+endif()
+
+if(HAVE_CRYPTO)
+  set(LIBZIP_OPTIONAL_FILES ${LIBZIP_OPTIONAL_FILES} zip_winzip_aes.c zip_source_winzip_aes_decode.c zip_source_winzip_aes_encode.c
+)
+endif()
+
+add_library(zip STATIC ${LIBZIP_SOURCES} ${LIBZIP_EXTRA_FILES} ${LIBZIP_OPTIONAL_FILES} ${LIBZIP_OPSYS_FILES})
+set_target_properties(zip PROPERTIES VERSION 5.0 SOVERSION 5)
+target_link_libraries(zip ${ZLIB_LIBRARY} ${OPTIONAL_LIBRARY})
+
