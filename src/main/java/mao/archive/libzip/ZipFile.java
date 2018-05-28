@@ -35,7 +35,7 @@ public class ZipFile implements Closeable {
     private final ZipCoder zc;
 
     private ProgressListener listener;
-    private String password;
+    private String defaultPassword;
     /*the compression method*/
     private int compressionMethod = ZipEntry.ZIP_CM_DEFAULT;
 
@@ -252,12 +252,12 @@ public class ZipFile implements Closeable {
     }
 
     public boolean setEntryEncryptionMethod(long index, int emethod) {
-        if (index == -1 || (password == null && emethod != ZipEntry.ZIP_EM_NONE)) {
+        if (index == -1 || (defaultPassword == null && emethod != ZipEntry.ZIP_EM_NONE)) {
             throw new IllegalArgumentException("index invalid or do not set password");
         }
         synchronized (this) {
             ensureOpen();
-            return setEntryEncryptionMethod(jzip, index, emethod, password);
+            return setEntryEncryptionMethod(jzip, index, emethod, defaultPassword);
         }
     }
 
@@ -293,18 +293,19 @@ public class ZipFile implements Closeable {
     }
 
 
+    public String getDefaultPassword() {
+        return defaultPassword;
+    }
+
     /**
      * Sets the default password used when accessing encrypted files
      *
      * @param password
      */
-    public void setPassword(String password) {
-        this.password = password;
+    public void setDefaultPassword(String password) {
+        this.defaultPassword = password;
     }
 
-    public String getPassword() {
-        return password;
-    }
 
     public String getComment() {
         synchronized (this) {
@@ -341,7 +342,7 @@ public class ZipFile implements Closeable {
         long jzf;
         synchronized (this) {
             ensureOpen();
-            jzf = openEntry(jzip, entry.index, password);
+            jzf = openEntry(jzip, entry.index, defaultPassword);
             return new ZipFileInputStream(jzf, entry.getSize());
         }
     }
