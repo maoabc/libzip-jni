@@ -1,9 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 project(libzip)
 
-option(ENABLE_GNUTLS "Enable use of GnuTLS" ON)
 option(ENABLE_OPENSSL "Enable use of OpenSSL" ON)
-option(ENABLE_COMMONCRYPTO "Enable use of CommonCrypto" ON)
+option(ENABLE_COMMONCRYPTO "Enable use of CommonCrypto" OFF)
 
 
 include(CheckFunctionExists)
@@ -24,7 +23,7 @@ endif()
 set(GNUTLS_FOUND FALSE)
 
 if(ENABLE_OPENSSL)
-  include(FindOpenSSL)
+include(AndroidFindOpenssl.cmake)
 else()
   set(OPENSSL_FOUND FALSE)
 endif()
@@ -35,8 +34,7 @@ set(PACKAGE "libzip")
 set(PACKAGE_NAME ${PACKAGE})
 set(PACKAGE_VERSION_MAJOR "1")
 set(PACKAGE_VERSION_MINOR "5")
-set(PACKAGE_VERSION_MICRO "0")
-#SET(VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}")
+set(PACKAGE_VERSION_MICRO "1")
 set(VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_MICRO}")
 set(PACKAGE_VERSION ${VERSION})
 set(LIBZIP_VERSION ${PACKAGE_VERSION})
@@ -142,18 +140,18 @@ else()
 endif(BZIP2_FOUND)
 
 if (COMMONCRYPTO_FOUND)
-  set (HAVE_CRYPTO 1)
-  set (HAVE_COMMONCRYPTO 1)
+  #set (HAVE_CRYPTO 1)
+  #set (HAVE_COMMONCRYPTO 1)
 elseif (OPENSSL_FOUND)
   set (HAVE_CRYPTO 1)
   set (HAVE_OPENSSL 1)
   include_directories(${OPENSSL_INCLUDE_DIR})
   set (OPTIONAL_LIBRARY ${OPTIONAL_LIBRARY} ${OPENSSL_LIBRARIES})
 elseif (GNUTLS_FOUND AND NETTLE_FOUND)
-  set (HAVE_CRYPTO 1)
-  set (HAVE_GNUTLS 1)
-  include_directories(${GNUTLS_INCLUDE_DIR} ${NETTLE_INCLUDE_DIR})
-  set (OPTIONAL_LIBRARY ${OPTIONAL_LIBRARY} ${GNUTLS_LIBRARY} ${NETTLE_LIBRARY})
+  #set (HAVE_CRYPTO 1)
+  #set (HAVE_GNUTLS 1)
+  #include_directories(${GNUTLS_INCLUDE_DIR} ${NETTLE_INCLUDE_DIR})
+  #set (OPTIONAL_LIBRARY ${OPTIONAL_LIBRARY} ${GNUTLS_LIBRARY} ${NETTLE_LIBRARY})
 endif()
 
 if (NOT HAVE_CRYPTO)
@@ -163,11 +161,11 @@ endif()
 add_definitions("-DHAVE_CONFIG_H")
 
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(lib)
 
 add_subdirectory(zlib)
+
 
 if(HAVE_STDINT_H_LIBZIP)
   set(LIBZIP_TYPES_INCLUDE "#include <stdint.h>")
@@ -256,8 +254,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake-zipconf.h.in ${CMAKE_CURRENT_BI
 
 
 
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 
-add_library(zip-jni SHARED zip_file.c jni_util.c)
+add_library(zip-jni SHARED zip_file.c jni_util.c register_native.c)
 
 target_link_libraries(zip-jni zip zlib log)

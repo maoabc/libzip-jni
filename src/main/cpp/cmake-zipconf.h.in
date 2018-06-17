@@ -2,9 +2,9 @@
 #define _HAD_ZIPCONF_H
 
 /*
-   zipconf.h -- platform specific include virtualFile
+   zipconf.h -- platform specific include file
 
-   This virtualFile was generated automatically by CMake
+   This file was generated automatically by CMake
    based on ../cmake-zipconf.h.in.
  */
 

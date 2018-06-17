@@ -1,5 +1,5 @@
 set(SOURCE_FILES
-compress.c
+  compress.c
   gzclose.c
   gzread.c
   infback.c
@@ -16,8 +16,7 @@ compress.c
   crc32.c
   )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}
-  )
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library (zlib STATIC ${SOURCE_FILES})
 set_target_properties(zlib PROPERTIES VERSION 3.0 SOVERSION 3 )

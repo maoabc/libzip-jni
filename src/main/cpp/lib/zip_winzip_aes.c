@@ -38,7 +38,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <openssl/evp.h>
 
 
 #define MAX_KEY_LENGTH 256
@@ -111,7 +111,7 @@ _zip_winzip_aes_new(const zip_uint8_t *password, zip_uint64_t password_length, c
 
     memset(ctx->counter, 0, sizeof(ctx->counter));
     ctx->pad_offset = ZIP_CRYPTO_AES_BLOCK_LENGTH;
-    
+
     if (!_zip_crypto_pbkdf2(password, password_length, salt, key_length / 2, PBKDF2_ITERATIONS, buffer, 2 * key_length + WINZIP_AES_PASSWORD_VERIFY_LENGTH)) {
         free(ctx);
         return NULL;

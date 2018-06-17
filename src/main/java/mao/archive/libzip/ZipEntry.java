@@ -3,25 +3,14 @@
 package mao.archive.libzip;
 
 
+import static mao.archive.libzip.ZipFile.ZIP_EM_NONE;
+
 /**
  * 从java.util.zip.ZipEntry修改来的
  * This class is used to represent a ZIP file entry.
  *
- * @author David Connelly
  */
 public class ZipEntry {
-
-    /* encryption methods */
-    public static final int ZIP_EM_NONE = 0;  /* not encrypted */
-    public static final int ZIP_EM_TRAD_PKWARE = 1; /* traditional PKWARE encryption */
-    public static final int ZIP_EM_AES_128 = 0x0101;  /* Winzip AES encryption */
-    public static final int ZIP_EM_AES_192 = 0x0102;
-    public static final int ZIP_EM_AES_256 = 0x0103;
-    public static final int ZIP_EM_UNKNOWN = 0xffff; /* unknown algorithm */
-
-    public static final int ZIP_CM_DEFAULT = -1; /* better of deflate or store */
-    public static final int ZIP_CM_STORE = 0; /* stored (uncompressed) */
-    public static final int ZIP_CM_DEFLATE = 8; /* deflated */
 
 
     long index = -1;                 /* index within archive */
@@ -31,9 +20,8 @@ public class ZipEntry {
     long crc = -1;      // crc-32 of entry data
     long size;     // uncompressed size of entry data
     long csize;    // compressed size of entry data
-    int method = ZIP_CM_DEFAULT;    // compression method
-    int emethod = ZIP_EM_NONE;
-    int flags;       // general purpose flags
+    int method;    // compression method
+    int emethod;
     byte[] extra;       // optional extra field data for entry
     String comment;     // optional comment string for entry
 
@@ -49,9 +37,6 @@ public class ZipEntry {
      * Creates a new zip entry with the specified name.
      *
      * @param name The entry name
-     * @throws NullPointerException     if the entry name is null
-     * @throws IllegalArgumentException if the entry name is longer than
-     *                                  0xFFFF bytes
      */
     public ZipEntry(String name) {
         this.name = name;
@@ -83,7 +68,6 @@ public class ZipEntry {
         csize = e.csize;
         method = e.method;
         emethod = e.emethod;
-        flags = e.flags;
         extra = e.extra;
         comment = e.comment;
     }
@@ -97,7 +81,6 @@ public class ZipEntry {
     public String getName() {
         return name;
     }
-
 
 
     /**
@@ -146,7 +129,6 @@ public class ZipEntry {
 
     /**
      * Returns the compression method of the entry.
-     *
      */
     public int getMethod() {
         return method;
@@ -154,7 +136,6 @@ public class ZipEntry {
 
     /**
      * Returns the encryption method of the entry.
-     *
      */
     public int getEmethod() {
         return emethod;

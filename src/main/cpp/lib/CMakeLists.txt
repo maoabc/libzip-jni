@@ -115,12 +115,16 @@ set(LIBZIP_OPSYS_FILES
 )
 
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/..)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/..)
+
 
 add_custom_target(update_zip_err_str
   COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/make_zip_err_str.sh ${CMAKE_CURRENT_SOURCE_DIR}/zip.h ${CMAKE_CURRENT_SOURCE_DIR}/zip_err_str.c
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/zip.h ${CMAKE_CURRENT_SOURCE_DIR}/make_zip_err_str.sh
+  COMMENT "update err str"
+
 )
+#add_custom_command(update ddd)
 check_function_exists(mkstemp HAVE_MKSTEMP)
 if(NOT HAVE_MKSTEMP)
   set(LIBZIP_EXTRA_FILES mkstemp.c)

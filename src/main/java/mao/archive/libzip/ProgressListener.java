@@ -5,5 +5,5 @@ package mao.archive.libzip;
  */
 
 public interface ProgressListener {
-    void onProgressing(int progress);
+    void onProgressing(int percent);
 }
