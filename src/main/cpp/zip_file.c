@@ -7,11 +7,7 @@
 #include "jni_util.h"
 #include "jlong.h"
 #include "lib/zipint.h"
-#include <android/log.h>
-
-#define  LOG_TAG    "libzip-jni"
-#define  LOGI(...)  __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define  LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
+#include "zip_file.h"
 
 #define MAXNAME 1024
 
@@ -541,15 +537,15 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_readEntryBytes
     }
 
 
-    len = (jint) zip_fread(zf, buf + off, (zip_uint64_t) (len - off));
+    zip_int64_t l = zip_fread(zf, buf, (zip_uint64_t) len);
 
-    if (len != -1) {
-        (*env)->SetByteArrayRegion(env, bytes, off, len, buf);
+    if (l != -1) {
+        (*env)->SetByteArrayRegion(env, bytes, off, (jsize) l, buf);
     } else {
         JNU_ThrowIOExceptionWithLastError(env, "can't get byte array buffer!");
     }
 
-    return len;
+    return l;
 
 }
 
@@ -571,8 +567,8 @@ struct user_data {
 
 static void progress_callback(zip_t *za, double percent, void *vud) {
     struct user_data *data = vud;
-    LOGI("percent %f ", percent);
-    if (data->env != NULL && data->listener != NULL && progress_method_id != NULL) {
+//    LOGI("percent %f ", percent);
+    if (data->env && data->listener && progress_method_id) {
         (*data->env)->CallVoidMethod(data->env, data->listener, progress_method_id,
                                      (jint) (percent * 100));
     }
@@ -581,7 +577,7 @@ static void progress_callback(zip_t *za, double percent, void *vud) {
 
 static void ud_free(void *vud) {
     struct user_data *data = vud;
-    if (data->env != NULL && data->listener != NULL) {
+    if (data->env && data->listener) {
         (*data->env)->DeleteLocalRef(data->env, data->listener);
     }
 }
@@ -594,7 +590,7 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
     if (za == NULL) {
         return;
     }
-    if (listener != NULL) {
+    if (listener) {
         data.env = env;
         data.listener = listener;
         zip_register_progress_callback_with_state(za, 0.02, progress_callback, ud_free, &data);
@@ -604,6 +600,5 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
         JNU_ThrowIOException(env, zip_strerror(za));
     }
 }
-//TODO register native mathod
 
 

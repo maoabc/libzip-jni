@@ -61,20 +61,16 @@ public class ZipFile implements Closeable {
     private ProgressListener listener;
 
 
-    public ZipFile(String path) throws IOException {
-        this(path, "UTF-8", ZIP_CREATE);
-    }
-
     public ZipFile(File archive) throws IOException {
-        this(archive.getAbsolutePath(), "UTF-8", ZIP_CREATE);
+        this(archive.getCanonicalPath(), "UTF-8", ZIP_CREATE);
     }
 
     public ZipFile(File archive, String charset) throws IOException {
-        this(archive.getAbsolutePath(), charset, ZIP_CREATE);
+        this(archive.getCanonicalPath(), charset, ZIP_CREATE);
     }
 
     public ZipFile(File archive, String charset, int mode) throws IOException {
-        this(archive.getAbsolutePath(), charset, mode);
+        this(archive.getCanonicalPath(), charset, mode);
     }
 
     public ZipFile(String path, String charset, int mode) throws IOException {
@@ -466,11 +462,7 @@ public class ZipFile implements Closeable {
         if (entry == null) {
             throw new NullPointerException("entry");
         }
-        synchronized (this) {
-            ensureOpen();
-            long jzf = openEntry(jzip, entry.index, password);
-            return new ZipFileInputStream(jzf, entry.getSize());
-        }
+        return getInputStream(entry.index, password);
     }
 
     public InputStream getInputStream(long index, String password) throws IOException {

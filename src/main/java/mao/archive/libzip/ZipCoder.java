@@ -32,7 +32,6 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 /**
@@ -40,6 +39,7 @@ import java.util.Arrays;
  */
 
 final class ZipCoder {
+    public static final Charset UTF_8 = Charset.forName("UTF-8");
 
     String toString(byte[] ba, int length) {
         CharsetDecoder cd = decoder().reset();
@@ -95,7 +95,7 @@ final class ZipCoder {
         if (isUTF8)
             return getBytes(s);
         if (utf8 == null)
-            utf8 = new ZipCoder(StandardCharsets.UTF_8);
+            utf8 = new ZipCoder(UTF_8);
         return utf8.getBytes(s);
     }
 
@@ -104,7 +104,7 @@ final class ZipCoder {
         if (isUTF8)
             return toString(ba, len);
         if (utf8 == null)
-            utf8 = new ZipCoder(StandardCharsets.UTF_8);
+            utf8 = new ZipCoder(UTF_8);
         return utf8.toString(ba, len);
     }
 
