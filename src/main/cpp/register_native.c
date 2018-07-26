@@ -75,7 +75,9 @@ static JNINativeMethod methods[]={
 
         {"closeEntry","(J)V",(void *) Java_mao_archive_libzip_ZipFile_closeEntry},
 
-        {"close","(JLmao/archive/libzip/ProgressListener;)V",(void *) Java_mao_archive_libzip_ZipFile_close},
+        {"discard0","(J)V",(void *) Java_mao_archive_libzip_ZipFile_discard0},
+
+        {"close0","(JLmao/archive/libzip/ProgressListener;)V",(void *) Java_mao_archive_libzip_ZipFile_close0},
 
 };
 

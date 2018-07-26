@@ -185,7 +185,6 @@ public class ExampleInstrumentedTest {
         List<Thread> threads=new ArrayList<>();
         final ZipFile zipFile = new ZipFile(file);
         for (final ZipEntry entry : zipFile.entries()) {
-            System.out.println(entry.name);
             Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {

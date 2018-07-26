@@ -501,8 +501,12 @@ public class ZipFile implements Closeable {
         if (closeRequested)
             return;
         closeRequested = true;
-        close(jzip, listener);
+        close0(jzip, listener);
         jzip = 0;
+    }
+
+    public void discard() {
+        discard0(jzip);
     }
 
     public void setProgressListener(ProgressListener listener) {
@@ -742,9 +746,10 @@ public class ZipFile implements Closeable {
     //Closes file in archive and frees the memory allocated for it
     private static native void closeEntry(long jzf) throws IOException;
 
+    private static native void discard0(long jzip);
 
     //Closes archive and frees the memory allocated for it
-    private static native void close(long jzip, ProgressListener progressListener) throws IOException;
+    private static native void close0(long jzip, ProgressListener progressListener) throws IOException;
 
 
 }

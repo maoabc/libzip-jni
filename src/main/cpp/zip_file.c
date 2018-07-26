@@ -541,8 +541,6 @@ JNIEXPORT jlong JNICALL Java_mao_archive_libzip_ZipFile_readEntryBytes
 
     if (l != -1) {
         (*env)->SetByteArrayRegion(env, bytes, off, (jsize) l, buf);
-    } else {
-        JNU_ThrowIOExceptionWithLastError(env, "can't get byte array buffer!");
     }
 
     return l;
@@ -556,6 +554,11 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
     if (zip_fclose(zf)) {
         JNU_ThrowIOException(env, "close error");
     }
+}
+JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_discard0
+        (JNIEnv *env, jclass cls, jlong jzip){
+    zip_t *za = jlong_to_ptr(jzip);
+    zip_discard(za);
 }
 
 
@@ -583,7 +586,7 @@ static void ud_free(void *vud) {
 }
 
 
-JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
+JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close0
         (JNIEnv *env, jclass cls, jlong jzip, jobject listener) {
     struct user_data data;
     zip_t *za = jlong_to_ptr(jzip);

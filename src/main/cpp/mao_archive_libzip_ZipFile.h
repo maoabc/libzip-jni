@@ -279,10 +279,19 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
 
 /*
  * Class:     mao_archive_libzip_ZipFile
+ * Method:    discard
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_discard0
+  (JNIEnv *, jclass, jlong);
+
+
+/*
+ * Class:     mao_archive_libzip_ZipFile
  * Method:    close
  * Signature: (JLmao/archive/libzip/ProgressListener;)V
  */
-JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close
+JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_close0
   (JNIEnv *, jclass, jlong, jobject);
 
 #ifdef __cplusplus
