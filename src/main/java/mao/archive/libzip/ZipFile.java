@@ -51,11 +51,6 @@ public class ZipFile implements Closeable {
     private final String charset;
 
 
-    private int defaultEncryptionMethod = ZIP_EM_NONE;
-    private int defaultCompressionMethod = ZIP_CM_DEFAULT;
-    private int defaultCompressionLevel = 0;
-
-
     private final ZipCoder zc;
 
     private ProgressListener listener;
@@ -229,52 +224,9 @@ public class ZipFile implements Closeable {
         return index != -1 && remove(index);
     }
 
-    public int getDefaultEncryptionMethod() {
-        return defaultEncryptionMethod;
-    }
-
-    public void setDefaultEncryptionMethod(int em) {
-        checkSupportedEncryptionMethod(em);
-        if (this.defaultEncryptionMethod != em) {
-            this.defaultEncryptionMethod = em;
-            synchronized (this) {
-                ensureOpen();
-                long num = getEntriesCount(jzip);
-                for (int i = 0; i < num; i++) {
-                    setEncryptionMethod0(jzip, i, em, null);
-                }
-            }
-        }
-    }
-
-    public int getDefaultCompressionMethod() {
-        return defaultCompressionMethod;
-    }
-
-    public int getDefaultCompressionLevel() {
-        return defaultCompressionLevel;
-    }
-
-    public void setDefaultCompressionMethod(int cm, int level) {
-        checkSupportedCompressionMethod(cm, level);
-
-        if (this.defaultCompressionMethod != cm || this.defaultCompressionLevel != level) {
-            this.defaultCompressionMethod = cm;
-            this.defaultCompressionLevel = level;
-            //
-            synchronized (this) {
-                ensureOpen();
-                long num = getEntriesCount(jzip);
-                for (int i = 0; i < num; i++) {
-                    setCompressionMethod0(jzip, i, cm, level);
-                }
-            }
-
-        }
-    }
 
     public long addFile(String name, File file) throws IOException {
-        return addFile(name, file.getAbsolutePath(), 0, file.length(), defaultEncryptionMethod, defaultCompressionMethod, defaultCompressionLevel);
+        return addFile(name, file.getAbsolutePath(), 0, file.length(), ZIP_EM_NONE, ZIP_CM_DEFAULT, 0);
     }
 
     public long addFile(String name, File file, int em, int cm, int level) throws IOException {
@@ -294,7 +246,7 @@ public class ZipFile implements Closeable {
     }
 
     public long addBytes(String name, byte[] buf) throws IOException {
-        return addBytes(name, buf, defaultEncryptionMethod, defaultCompressionMethod, defaultCompressionLevel);
+        return addBytes(name, buf, ZIP_EM_NONE, ZIP_CM_DEFAULT, 0);
     }
 
     public long addBytes(String name, byte[] buf, int em, int cm, int level) throws IOException {
@@ -506,7 +458,11 @@ public class ZipFile implements Closeable {
     }
 
     public void discard() {
+        if (closeRequested)
+            return;
+        closeRequested = true;
         discard0(jzip);
+        jzip = 0;
     }
 
     public void setProgressListener(ProgressListener listener) {

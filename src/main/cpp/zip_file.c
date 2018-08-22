@@ -557,6 +557,7 @@ JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_closeEntry
 }
 JNIEXPORT void JNICALL Java_mao_archive_libzip_ZipFile_discard0
         (JNIEnv *env, jclass cls, jlong jzip){
+    LOGI("discard");
     zip_t *za = jlong_to_ptr(jzip);
     zip_discard(za);
 }

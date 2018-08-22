@@ -17,7 +17,7 @@ import static org.objectweb.asm.Opcodes.ASM5;
  *
  * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
  */
-public class ExampleUnitTest {
+public class GenerateNativeCode {
     @Test
     public void addition_isCorrect() throws Exception {
         assertEquals(4, 2 + 2);
