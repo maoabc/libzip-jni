@@ -545,13 +545,21 @@ public class ZipFile implements Closeable {
         }
 
         protected void finalize() throws Throwable {
-            close();
+            try {
+                close();
+            } finally {
+                super.finalize();
+            }
         }
     }
 
     @Override
     protected void finalize() throws Throwable {
-        close(null);
+        try {
+            close(null);
+        } finally {
+            super.finalize();
+        }
     }
 
     //初始化一些数据
