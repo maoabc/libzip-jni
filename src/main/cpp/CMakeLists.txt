@@ -120,12 +120,12 @@ int main(int argc, char *argv[]) { unsigned long x = FICLONERANGE; }" HAVE_FICLO
 test_big_endian(WORDS_BIGENDIAN)
 
 
-find_package(ZLIB REQUIRED)
-include_directories(${ZLIB_INCLUDE_DIR})
-set(CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIR})
-if(ZLIB_VERSION_STRING VERSION_LESS "1.1.2")
-  message(FATAL_ERROR "-- ZLIB version too old, please install at least v1.1.2")
-endif(ZLIB_VERSION_STRING VERSION_LESS "1.1.2")
+#find_package(ZLIB REQUIRED)
+#include_directories(${ZLIB_INCLUDE_DIR})
+#set(CMAKE_REQUIRED_INCLUDES ${ZLIB_INCLUDE_DIR})
+#if(ZLIB_VERSION_STRING VERSION_LESS "1.1.2")
+#  message(FATAL_ERROR "-- ZLIB version too old, please install at least v1.1.2")
+#endif(ZLIB_VERSION_STRING VERSION_LESS "1.1.2")
 
 
 
