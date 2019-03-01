@@ -39,11 +39,11 @@ import java.util.Arrays;
  */
 
 final class ZipCoder {
-    public static final Charset UTF_8 = Charset.forName("UTF-8");
+    private static final Charset UTF_8 = Charset.forName("UTF-8");
 
     String toString(byte[] ba, int length) {
         CharsetDecoder cd = decoder().reset();
-        int len = (int)(length * cd.maxCharsPerByte());
+        int len = (int) (length * cd.maxCharsPerByte());
         char[] ca = new char[len];
         if (len == 0)
             return new String(ca);
@@ -63,13 +63,16 @@ final class ZipCoder {
     }
 
     String toString(byte[] ba) {
+        if (ba == null) {
+            return null;
+        }
         return toString(ba, ba.length);
     }
 
     byte[] getBytes(String s) {
         CharsetEncoder ce = encoder().reset();
         char[] ca = s.toCharArray();
-        int len = (int)(ca.length * ce.maxBytesPerChar());
+        int len = (int) (ca.length * ce.maxBytesPerChar());
         byte[] ba = new byte[len];
         if (len == 0)
             return ba;
@@ -130,8 +133,8 @@ final class ZipCoder {
     private CharsetDecoder decoder() {
         if (dec == null) {
             dec = cs.newDecoder()
-              .onMalformedInput(CodingErrorAction.REPORT)
-              .onUnmappableCharacter(CodingErrorAction.REPORT);
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
         }
         return dec;
     }
@@ -139,8 +142,8 @@ final class ZipCoder {
     private CharsetEncoder encoder() {
         if (enc == null) {
             enc = cs.newEncoder()
-              .onMalformedInput(CodingErrorAction.REPORT)
-              .onUnmappableCharacter(CodingErrorAction.REPORT);
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
         }
         return enc;
     }

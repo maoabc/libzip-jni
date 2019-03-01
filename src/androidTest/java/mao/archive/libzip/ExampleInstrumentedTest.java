@@ -1,8 +1,6 @@
 package mao.archive.libzip;
 
 import android.content.Context;
-import androidx.test.InstrumentationRegistry;
-import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -20,6 +18,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import androidx.test.InstrumentationRegistry;
+import androidx.test.runner.AndroidJUnit4;
 
 import static mao.archive.libzip.ZipFile.ZIP_CM_DEFLATE;
 import static mao.archive.libzip.ZipFile.ZIP_EM_AES_128;
@@ -190,8 +191,8 @@ public class ExampleInstrumentedTest {
                 public void run() {
                     try {
                         InputStream is1 = zipFile.getInputStream(entry);
-                        System.out.println("open "+entry.name);
-                        InputStream is2 = getClass().getResourceAsStream("/" + entry.name);
+                        System.out.println("open "+entry.getName());
+                        InputStream is2 = getClass().getResourceAsStream("/" + entry.getName());
                         byte[] d1 = digest(is1);
                         byte[] d2 = digest(is2);
                         System.out.println(Arrays.toString(d1)+"   "+Arrays.toString(d2));

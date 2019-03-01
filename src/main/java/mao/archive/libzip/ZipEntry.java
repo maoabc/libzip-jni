@@ -8,29 +8,35 @@ import static mao.archive.libzip.ZipFile.ZIP_EM_NONE;
 /**
  * 从java.util.zip.ZipEntry修改来的
  * This class is used to represent a ZIP file entry.
- *
  */
 public class ZipEntry {
 
 
-    long index = -1;                 /* index within archive */
+    final long index;                 /* index within archive */
 
-    String name;
-    long mtime = -1;     // last modification time
-    long crc = -1;      // crc-32 of entry data
-    long size;     // uncompressed size of entry data
-    long csize;    // compressed size of entry data
-    int method;    // compression method
-    int emethod;
-    byte[] extra;       // optional extra field data for entry
-    String comment;     // optional comment string for entry
+    private final String name;
+    private final long mtime;     // last modification time
+    private final long crc;      // crc-32 of entry data
+    private final long size;     // uncompressed size of entry data
+    private final long csize;    // compressed size of entry data
+    private final int method;    // compression method
+    private final int emethod;
+    private final byte[] extra;       // optional extra field data for entry
+    private final String comment;     // optional comment string for entry
 
 
-    /**
-     * Creates a new un-initialized zip entry
-     */
-    ZipEntry() {
-
+    public ZipEntry(long index, ZipCoder zc, byte[] name, long mtime, long crc, long size, long csize,
+                    int method, int emethod, byte[] extra, byte[] comment) {
+        this.index = index;
+        this.name = zc.toString(name);
+        this.mtime = mtime;
+        this.crc = crc;
+        this.size = size;
+        this.csize = csize;
+        this.method = method;
+        this.emethod = emethod;
+        this.extra = extra;
+        this.comment = zc.toString(comment);
     }
 
     /**
@@ -39,7 +45,17 @@ public class ZipEntry {
      * @param name The entry name
      */
     public ZipEntry(String name) {
+        this.index = -1;
         this.name = name;
+        this.mtime = 0;
+        this.crc = 0;
+        this.size = 0;
+        this.csize = 0;
+        this.method = 0;
+        this.emethod = 0;
+        this.extra = null;
+        this.comment = null;
+
     }
 
     /**
@@ -49,27 +65,6 @@ public class ZipEntry {
      */
     public boolean isValid() {
         return index != -1;
-    }
-
-
-    /**
-     * Creates a new zip entry with fields taken from the specified
-     * zip entry.
-     *
-     * @param e A zip Entry object
-     * @throws NullPointerException if the entry object is null
-     */
-    public ZipEntry(ZipEntry e) {
-        index = e.index;
-        name = e.name;
-        mtime = e.mtime;
-        crc = e.crc;
-        size = e.size;
-        csize = e.csize;
-        method = e.method;
-        emethod = e.emethod;
-        extra = e.extra;
-        comment = e.comment;
     }
 
 

@@ -94,7 +94,7 @@ public class ZipFile implements Closeable {
             ensureOpen();
             long index = nameLocate0(jzip, zc.getBytes(name));
             if (index != -1) {
-                return getEntry(index);
+                return getEntry0(jzip, zc, index);
             }
         }
         return null;
@@ -102,41 +102,14 @@ public class ZipFile implements Closeable {
 
     public ZipEntry getEntry(long index) {
         if (index == -1) {
-            throw new IllegalArgumentException("index == -1");
+            throw new NullPointerException("index == -1");
         }
         synchronized (this) {
             ensureOpen();
-            long jstat = openStat0(jzip, index);
-            if (jstat != 0) {
-                ZipEntry entry = readEntry(jstat);
-                entry.index = index;
-                freeStat0(jstat);
-
-                byte[] comment = getComment0(jzip, index);
-                if (comment != null) {
-                    entry.comment = zc.toString(comment);
-                }
-                return entry;
-            }
+            return getEntry0(jzip, zc, index);
         }
-        return null;
     }
 
-    private ZipEntry readEntry(long jstat) {
-        ZipEntry e = new ZipEntry();
-
-        byte[] rawName = getName0(jstat);
-        e.name = zc.toString(rawName);
-
-        long time = getModifyTime0(jstat);
-        e.mtime = time == -1 ? time : time * 1000;
-        e.csize = getCSize0(jstat);
-        e.size = getSize0(jstat);
-        e.crc = getCrc0(jstat);
-        e.method = getCompressionMethod0(jstat);
-        e.emethod = getEncryptionMethod0(jstat);
-        return e;
-    }
 
     public Iterable<ZipEntry> entries() {
         synchronized (this) {
@@ -165,7 +138,7 @@ public class ZipFile implements Closeable {
 
                 @Override
                 public ZipEntry next() {
-                    return getEntry(index++);
+                    return getEntry0(jzip, zc, index++);
                 }
             };
         }
@@ -185,7 +158,6 @@ public class ZipFile implements Closeable {
 
     public boolean rename(ZipEntry entry, String newName) {
         if (rename(entry.index, newName)) {
-            entry.name = newName;
             return true;
         }
         return false;
@@ -333,18 +305,6 @@ public class ZipFile implements Closeable {
     }
 
 
-    public String getComment(long index) {
-        synchronized (this) {
-            ensureOpen();
-            byte[] bytes = getComment0(jzip, index);
-            if (bytes != null) {
-                return zc.toString(bytes);
-            }
-        }
-        return null;
-
-    }
-
     public boolean setComment(long index, String comment) {
         if (comment == null) {
             throw new NullPointerException("comment");
@@ -421,7 +381,7 @@ public class ZipFile implements Closeable {
         synchronized (this) {
             ensureOpen();
             long jzf = openEntry(jzip, index, password);
-            ZipEntry entry = getEntry(index);
+            ZipEntry entry = getEntry0(jzip, zc, index);
             return new ZipFileInputStream(jzf, entry.getSize());
         }
     }
@@ -645,29 +605,9 @@ public class ZipFile implements Closeable {
     /*returns the index of the file named rawName in archive*/
     private static native long nameLocate0(long jzip, byte[] rawName);
 
-    //native struct zip_stat
-    private static native long openStat0(long jzip, long index);
 
-    private static native byte[] getName0(long jstat);
+    private static native ZipEntry getEntry0(long jzip, ZipCoder zc, long index);
 
-    private static native long getSize0(long jstat);
-
-    private static native long getCSize0(long jstat);
-
-    private static native long getModifyTime0(long jstat);
-
-    private static native long getCrc0(long jstat);
-
-    private static native int getCompressionMethod0(long jstat);
-
-    private static native int getEncryptionMethod0(long jstat);
-
-//    private static native int getFlags0(long jstat);
-
-    private static native void freeStat0(long jstat);
-
-
-    private static native byte[] getComment0(long jzip, long index);
 
     /*Sets zip entry */
     private static native boolean setModifyTime0(long jzip, long index, long time);
