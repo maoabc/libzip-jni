@@ -18,8 +18,7 @@ static jmethodID progress_method;
 static jclass zipEntryClass;
 static jmethodID zipEntry_ctor;
 
-static void Java_mao_archive_libzip_ZipFile_initIDs
-        (JNIEnv *env, jclass cls) {
+void initIDs(JNIEnv *env) {
     jclass listener_cls = (*env)->FindClass(env, "mao/archive/libzip/ProgressListener");
     if (listener_cls == NULL) {
         return;
@@ -570,8 +569,6 @@ static void Java_mao_archive_libzip_ZipFile_close0
 #define NELEM(x) ((int) (sizeof(x) / sizeof((x)[0])))
 
 static JNINativeMethod methods[] = {
-        {"initIDs",               "()V",                                                            (void *) Java_mao_archive_libzip_ZipFile_initIDs},
-
         {"open",                  "(Ljava/lang/String;I)J",                                         (void *) Java_mao_archive_libzip_ZipFile_open},
 
         {"getEntriesCount",       "(J)J",                                                           (void *) Java_mao_archive_libzip_ZipFile_getEntriesCount},

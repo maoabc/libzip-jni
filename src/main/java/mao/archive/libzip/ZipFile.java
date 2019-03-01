@@ -42,7 +42,6 @@ public class ZipFile implements Closeable {
 
     static {
         System.loadLibrary("zip-jni");
-        initIDs();
     }
 
     private volatile boolean closeRequested;
@@ -521,9 +520,6 @@ public class ZipFile implements Closeable {
             super.finalize();
         }
     }
-
-    //初始化一些数据
-    private static native void initIDs();
 
     /**
      * Opens the zip archive specified by path and returns a pointer to a struct zip
