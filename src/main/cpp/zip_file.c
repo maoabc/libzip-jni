@@ -12,6 +12,10 @@
 
 static inline char *getBuffer(JNIEnv *env, jbyteArray jarr, char *stack_buf);
 
+static void initConstant(JNIEnv *env, jclass c, const char *fieldName, int value) {
+    jfieldID field = (*env)->GetStaticFieldID(env, c, fieldName, "I");
+    (*env)->SetStaticIntField(env, c, field, value);
+}
 
 static jmethodID progress_method;
 
@@ -31,6 +35,26 @@ void initIDs(JNIEnv *env) {
     zipEntry_ctor = (*env)->GetMethodID(env, zipEntryClass, "<init>",
                                         "(JLmao/archive/libzip/ZipCoder;[B" "JJJJII[B[B)V");
 
+    jclass zipFileClass = (*env)->FindClass(env, "mao/archive/libzip/ZipFile");
+    initConstant(env, zipFileClass, "ZIP_CREATE", ZIP_CREATE);
+    initConstant(env, zipFileClass, "ZIP_EXCL", ZIP_EXCL);
+    initConstant(env, zipFileClass, "ZIP_CHECKCONS", ZIP_CHECKCONS);
+    initConstant(env, zipFileClass, "ZIP_TRUNCATE", ZIP_TRUNCATE);
+    initConstant(env, zipFileClass, "ZIP_RDONLY", ZIP_RDONLY);
+
+    initConstant(env, zipFileClass, "ZIP_EM_NONE", ZIP_EM_NONE);
+    initConstant(env, zipFileClass, "ZIP_EM_TRAD_PKWARE", ZIP_EM_TRAD_PKWARE);
+    initConstant(env, zipFileClass, "ZIP_EM_AES_128", ZIP_EM_AES_128);
+    initConstant(env, zipFileClass, "ZIP_EM_AES_192", ZIP_EM_AES_192);
+    initConstant(env, zipFileClass, "ZIP_EM_AES_256", ZIP_EM_AES_256);
+
+    initConstant(env, zipFileClass, "ZIP_CM_DEFAULT", ZIP_CM_DEFAULT);
+    initConstant(env, zipFileClass, "ZIP_CM_STORE", ZIP_CM_STORE);
+    initConstant(env, zipFileClass, "ZIP_CM_DEFLATE", ZIP_CM_DEFLATE);
+    initConstant(env, zipFileClass, "ZIP_CM_BZIP2", ZIP_CM_BZIP2);
+
+
+    (*env)->DeleteLocalRef(env, zipFileClass);
 
     (*env)->DeleteLocalRef(env, listener_cls);
 }

@@ -14,30 +14,30 @@ import java.util.zip.ZipException;
 public class ZipFile implements Closeable {
 
     /*file open mode*/
-    public static final int ZIP_CREATE = 1;       //Create the archive if it does not exist.
-    public static final int ZIP_EXCL = 2;         //Error if archive already exists.
-    public static final int ZIP_CHECKCONS = 4;    //Perform additional stricter consistency checks on the archive, and error if they fail.
-    public static final int ZIP_TRUNCATE = 8;     //If archive exists, ignore its current contents.  In other words, handle it the same way as an empty archive.
-    public static final int ZIP_RDONLY = 16;      //Open archive in read-only mode.
+    public static final int ZIP_CREATE = placeholder();       //Create the archive if it does not exist.
+    public static final int ZIP_EXCL = placeholder();         //Error if archive already exists.
+    public static final int ZIP_CHECKCONS = placeholder();    //Perform additional stricter consistency checks on the archive, and error if they fail.
+    public static final int ZIP_TRUNCATE = placeholder();     //If archive exists, ignore its current contents.  In other words, handle it the same way as an empty archive.
+    public static final int ZIP_RDONLY = placeholder();      //Open archive in read-only mode.
 
 
     /* encryption methods */
-    public static final int ZIP_EM_NONE = 0;  /* not encrypted */
+    public static final int ZIP_EM_NONE = placeholder();  /* not encrypted */
 
     //不再支持此加密创建文件，但可以解压
     @Deprecated
-    public static final int ZIP_EM_TRAD_PKWARE = 1; /* traditional PKWARE encryption */
+    public static final int ZIP_EM_TRAD_PKWARE = placeholder(); /* traditional PKWARE encryption */
 
-    public static final int ZIP_EM_AES_128 = 0x0101;  /* Winzip AES encryption */
-    public static final int ZIP_EM_AES_192 = 0x0102;
-    public static final int ZIP_EM_AES_256 = 0x0103;
-    public static final int ZIP_EM_UNKNOWN = 0xffff; /* unknown algorithm */
+    public static final int ZIP_EM_AES_128 = placeholder();  /* Winzip AES encryption */
+    public static final int ZIP_EM_AES_192 = placeholder();
+    public static final int ZIP_EM_AES_256 = placeholder();
+    public static final int ZIP_EM_UNKNOWN = placeholder(); /* unknown algorithm */
 
-    public static final int ZIP_CM_DEFAULT = -1; /* better of deflate or store */
-    public static final int ZIP_CM_STORE = 0; /* stored (uncompressed) */
-    public static final int ZIP_CM_DEFLATE = 8; /* deflated */
+    public static final int ZIP_CM_DEFAULT = placeholder(); /* better of deflate or store */
+    public static final int ZIP_CM_STORE = placeholder(); /* stored (uncompressed) */
+    public static final int ZIP_CM_DEFLATE = placeholder(); /* deflated */
     //暂时不用
-    public static final int ZIP_CM_BZIP2 = 12; /* compressed using BZIP2 algorithm */
+    public static final int ZIP_CM_BZIP2 = placeholder(); /* compressed using BZIP2 algorithm */
 
 
     static {
@@ -282,23 +282,21 @@ public class ZipFile implements Closeable {
         if (level < 0 || level > 9) {
             throw new IllegalArgumentException("compression method level [0-9], current is " + level);
         }
-        switch (cm) {
-            case ZIP_CM_DEFAULT:
-            case ZIP_CM_DEFLATE:
-            case ZIP_CM_STORE:
-            case ZIP_CM_BZIP2:
-                return;
+        if (cm == ZIP_CM_DEFAULT ||
+                cm == ZIP_CM_DEFLATE ||
+                cm == ZIP_CM_STORE ||
+                cm == ZIP_CM_BZIP2) {
+            return;
         }
         throw new IllegalArgumentException("invalid compression method");
     }
 
     private static void checkSupportedEncryptionMethod(int em) {
-        switch (em) {
-            case ZIP_EM_NONE:
-            case ZIP_EM_AES_128:
-            case ZIP_EM_AES_192:
-            case ZIP_EM_AES_256:
-                return;
+        if (em == ZIP_EM_NONE ||
+                em == ZIP_EM_AES_128 ||
+                em == ZIP_EM_AES_192 ||
+                em == ZIP_EM_AES_256) {
+            return;
         }
         throw new IllegalArgumentException("invalid encryption method");
     }
@@ -651,5 +649,10 @@ public class ZipFile implements Closeable {
     //Closes archive and frees the memory allocated for it
     private static native void close0(long jzip, ProgressListener progressListener) throws IOException;
 
+
+    // A hack to avoid these constants being inlined by javac...
+    private static int placeholder() {
+        return 0;
+    }
 
 }
