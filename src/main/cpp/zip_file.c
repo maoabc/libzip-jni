@@ -488,7 +488,7 @@ static jlong Java_mao_archive_libzip_ZipFile_openEntry
         switch (za->error.zip_err) {
             case ZIP_ER_WRONGPASSWD:
             case ZIP_ER_NOPASSWD: {
-                JNU_ThrowByNameWithLastError(env, "mao/archive/libzip/WrongPasswordException",
+                JNU_ThrowByNameWithLastError(env, "mao/archive/libzip/PasswordException",
                                              zip_strerror(za));
                 break;
             }

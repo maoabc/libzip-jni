@@ -165,7 +165,7 @@ public class ExampleInstrumentedTest {
             InputStream inputStream = zipFile.getInputStream(0, "aaaaa");
 
         } catch (IOException e) {
-            assert e instanceof WrongPasswordException;
+            assert e instanceof PasswordException;
         }
 
     }

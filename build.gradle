@@ -20,8 +20,7 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            consumerProguardFiles 'proguard-rules.pro'
         }
     }
     externalNativeBuild {
@@ -46,4 +45,5 @@ dependencies {
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.ow2.asm:asm:6.2'
 
+    implementation "androidx.annotation:annotation:${versions.annotationx}"
 }
