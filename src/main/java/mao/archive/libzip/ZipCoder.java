@@ -34,10 +34,13 @@ import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.util.Arrays;
 
+import androidx.annotation.Keep;
+
 /**
  * Utility class for zipfile name and comment decoding and encoding
  */
 
+@Keep
 final class ZipCoder {
     private static final Charset UTF_8 = Charset.forName("UTF-8");
 

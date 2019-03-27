@@ -3,12 +3,15 @@
 package mao.archive.libzip;
 
 
+import androidx.annotation.Keep;
+
 import static mao.archive.libzip.ZipFile.ZIP_EM_NONE;
 
 /**
  * 从java.util.zip.ZipEntry修改来的
  * This class is used to represent a ZIP file entry.
  */
+@Keep
 public class ZipEntry {
 
 

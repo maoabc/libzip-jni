@@ -8,35 +8,52 @@ import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.zip.ZipException;
 
+import androidx.annotation.Keep;
+
 /**
  * Created by mao on 16-10-30.
  */
 public class ZipFile implements Closeable {
 
     /*file open mode*/
+    @Keep
     public static final int ZIP_CREATE = placeholder();       //Create the archive if it does not exist.
+    @Keep
     public static final int ZIP_EXCL = placeholder();         //Error if archive already exists.
+    @Keep
     public static final int ZIP_CHECKCONS = placeholder();    //Perform additional stricter consistency checks on the archive, and error if they fail.
+    @Keep
     public static final int ZIP_TRUNCATE = placeholder();     //If archive exists, ignore its current contents.  In other words, handle it the same way as an empty archive.
+    @Keep
     public static final int ZIP_RDONLY = placeholder();      //Open archive in read-only mode.
 
 
     /* encryption methods */
+    @Keep
     public static final int ZIP_EM_NONE = placeholder();  /* not encrypted */
 
     //不再支持此加密创建文件，但可以解压
     @Deprecated
+    @Keep
     public static final int ZIP_EM_TRAD_PKWARE = placeholder(); /* traditional PKWARE encryption */
 
+    @Keep
     public static final int ZIP_EM_AES_128 = placeholder();  /* Winzip AES encryption */
+    @Keep
     public static final int ZIP_EM_AES_192 = placeholder();
+    @Keep
     public static final int ZIP_EM_AES_256 = placeholder();
+    @Keep
     public static final int ZIP_EM_UNKNOWN = placeholder(); /* unknown algorithm */
 
+    @Keep
     public static final int ZIP_CM_DEFAULT = placeholder(); /* better of deflate or store */
+    @Keep
     public static final int ZIP_CM_STORE = placeholder(); /* stored (uncompressed) */
+    @Keep
     public static final int ZIP_CM_DEFLATE = placeholder(); /* deflated */
     //暂时不用
+    @Keep
     public static final int ZIP_CM_BZIP2 = placeholder(); /* compressed using BZIP2 algorithm */
 
 
@@ -502,21 +519,13 @@ public class ZipFile implements Closeable {
         }
 
         protected void finalize() throws Throwable {
-            try {
-                close();
-            } finally {
-                super.finalize();
-            }
+            close();
         }
     }
 
     @Override
     protected void finalize() throws Throwable {
-        try {
-            close(null);
-        } finally {
-            super.finalize();
-        }
+        close(null);
     }
 
     /**
@@ -527,14 +536,18 @@ public class ZipFile implements Closeable {
      * @return a struct zip pointer
      * @throws IOException
      */
+    @Keep
     private static native long open(String path, int mode) throws IOException;
 
     //得到zip内文件的数量
+    @Keep
     private static native long getEntriesCount(long jzip);
 
 
+    @Keep
     private static native void setDefaultPassword0(long jzip, String password);
 
+    @Keep
     private static native String getDefaultPassword0(long jzip);
 
     /**
@@ -544,6 +557,7 @@ public class ZipFile implements Closeable {
      * @param index index in the zip archive
      * @return
      */
+    @Keep
     private static native boolean removeEntry0(long jzip, long index);
 
 
@@ -555,6 +569,7 @@ public class ZipFile implements Closeable {
      * @param name  new path
      * @return
      */
+    @Keep
     private static native boolean renameEntry(long jzip, long index, byte[] name);
 
 
@@ -569,6 +584,7 @@ public class ZipFile implements Closeable {
      * @return the index of the new file in the archive
      * @throws IOException
      */
+    @Keep
     private static native long addFileEntry0(long jzip, byte[] name, String fileName, long start, long len) throws IOException;
 
 
@@ -583,6 +599,7 @@ public class ZipFile implements Closeable {
      * @return the index of the new file in the archive
      * @throws IOException
      */
+    @Keep
     private static native long addBufferEntry0(long jzip, byte[] name, byte[] buffer) throws IOException;
 
 
@@ -594,27 +611,36 @@ public class ZipFile implements Closeable {
      * @return the index of the new entry in the archive
      * @throws IOException
      */
+    @Keep
     private static native long addDirectoryEntry0(long jzip, byte[] name) throws IOException;
 
     /*returns the index of the file named rawName in archive*/
+    @Keep
     private static native long nameLocate0(long jzip, byte[] rawName);
 
 
+    @Keep
     private static native ZipEntry getEntry0(long jzip, ZipCoder zc, long index);
 
 
     /*Sets zip entry */
+    @Keep
     private static native boolean setModifyTime0(long jzip, long index, long time);
 
+    @Keep
     private static native boolean setEncryptionMethod0(long jzip, long index, int emethod, String password);
 
+    @Keep
     private static native boolean setCompressionMethod0(long jzip, long index, int cm, int level);
 
+    @Keep
     private static native boolean setComment0(long jzip, long index, byte[] comment);
 
 
+    @Keep
     private static native byte[] getZipComment0(long jzip);
 
+    @Keep
     private static native boolean setZipComment0(long jzip, byte[] comment);
 
     /**
@@ -625,6 +651,7 @@ public class ZipFile implements Closeable {
      * @return a struct zip_file pointer
      * @throws IOException
      */
+    @Keep
     private static native long openEntry(long jzip, long index, String password) throws IOException;
 
 
@@ -638,15 +665,19 @@ public class ZipFile implements Closeable {
      * @return the number of bytes actually read is returned.  Otherwise, -1 is returned
      * @throws IOException
      */
+    @Keep
     private static native long readEntryBytes(long jzf, byte[] buf, int off, int len) throws IOException;
 
 
     //Closes file in archive and frees the memory allocated for it
+    @Keep
     private static native void closeEntry(long jzf) throws IOException;
 
+    @Keep
     private static native void discard0(long jzip);
 
     //Closes archive and frees the memory allocated for it
+    @Keep
     private static native void close0(long jzip, ProgressListener progressListener) throws IOException;
 
 
