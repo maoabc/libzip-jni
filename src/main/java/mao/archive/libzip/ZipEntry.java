@@ -72,6 +72,9 @@ public class ZipEntry {
     }
 
 
+    /**
+     * @return last modified time
+     */
     public long getTime() {
         return mtime;
     }
@@ -110,13 +113,13 @@ public class ZipEntry {
     /**
      * Returns the encryption method of the entry.
      */
-    public int getEmethod() {
+    public int getEncryptedMethod() {
         return emethod;
     }
 
 
     /**
-     * @return
+     * @return 附加数据
      */
     public byte[] getExtra() {
         return extra;
@@ -124,7 +127,6 @@ public class ZipEntry {
 
 
     /**
-     *
      * @return 注释
      */
     public String getComment() {
