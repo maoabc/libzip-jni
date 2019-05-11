@@ -1,6 +1,6 @@
 /*
   zip_source_winzip_aes_encode.c -- Winzip AES encryption routines
-  Copyright (C) 2009-2017 Dieter Baron and Thomas Klausner
+  Copyright (C) 2009-2019 Dieter Baron and Thomas Klausner
 
   This file is part of libzip, a library to manipulate ZIP archives.
   The authors can be contacted at <libzip@nih.at>
@@ -163,6 +163,7 @@ winzip_aes_encrypt(zip_source_t *src, void *ud, void *data, zip_uint64_t length,
 		/* TODO: return partial read? */
 		return -1;
 	    }
+	    buffer_n += _zip_buffer_read(ctx->buffer, data + ret, length - (zip_uint64_t)ret);
 	}
 
 	return (zip_int64_t)(buffer_n + (zip_uint64_t)ret);
