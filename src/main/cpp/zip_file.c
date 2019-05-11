@@ -567,7 +567,7 @@ static void progress_callback(zip_t *za, double percent, void *vud) {
 static void ud_free(void *vud) {
     struct user_data *data = vud;
     if (data->env && data->listener) {
-        (*data->env)->DeleteLocalRef(data->env, data->listener);
+        (*data->env)->DeleteGlobalRef(data->env, data->listener);
     }
 }
 
@@ -581,7 +581,7 @@ static void Java_mao_archive_libzip_ZipFile_close0
     }
     if (listener) {
         data.env = env;
-        data.listener = listener;
+        data.listener = (*env)->NewGlobalRef(env, listener);
         zip_register_progress_callback_with_state(za, 0.02, progress_callback, ud_free, &data);
     }
 
