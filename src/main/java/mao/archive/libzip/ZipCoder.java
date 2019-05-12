@@ -1,9 +1,10 @@
 
 package mao.archive.libzip;
 
-import java.nio.charset.Charset;
-
 import androidx.annotation.Keep;
+
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 
 
 @Keep
@@ -27,8 +28,14 @@ final class ZipCoder {
         return new String(ba, 0, ba.length, cs);
     }
 
+    // \0 end
     byte[] getBytes(String s) {
-        return s.getBytes(cs);
+        ByteBuffer buffer = cs.encode(s);
+        int limit = buffer.limit();
+        byte[] bytes = new byte[limit + 1];
+        buffer.get(bytes, 0, limit);
+        bytes[limit] = 0;
+        return bytes;
     }
 
 }
