@@ -1,14 +1,13 @@
 package mao.archive.libzip;
 
+import androidx.annotation.Keep;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Iterator;
-import java.util.zip.ZipException;
-
-import androidx.annotation.Keep;
 
 /**
  * Created by mao on 16-10-30.
@@ -104,7 +103,7 @@ public class ZipFile implements Closeable {
 
     public ZipEntry getEntry(String name) {
         if (name == null) {
-            throw new NullPointerException("path==null");
+            throw new NullPointerException("path is null");
         }
         synchronized (this) {
             ensureOpen();
@@ -118,7 +117,7 @@ public class ZipFile implements Closeable {
 
     public ZipEntry getEntry(long index) {
         if (index == -1) {
-            throw new NullPointerException("index == -1");
+            throw new IllegalArgumentException("index is -1");
         }
         synchronized (this) {
             ensureOpen();
@@ -162,7 +161,7 @@ public class ZipFile implements Closeable {
 
     public boolean hasEntry(String name) {
         if (name == null) {
-            throw new NullPointerException("path==null");
+            throw new NullPointerException("path is null");
         }
         synchronized (this) {
             ensureOpen();
@@ -403,19 +402,14 @@ public class ZipFile implements Closeable {
 
     private void ensureOpen() {
         if (closeRequested) {
-            throw new IllegalStateException("Zip file closed");
+            throw new IllegalStateException("zip file closed");
         }
 
         if (jzip == 0) {
-            throw new IllegalStateException("The object is not initialized.");
+            throw new IllegalStateException("the object is not initialized.");
         }
     }
 
-    private void ensureOpenOrZipException() throws IOException {
-        if (closeRequested) {
-            throw new ZipException("ZipFile closed");
-        }
-    }
 
     @Override
     public void close() throws IOException {
@@ -454,7 +448,7 @@ public class ZipFile implements Closeable {
             this.size = rem = size;
         }
 
-        public int read(byte b[], int off, int len) throws IOException {
+        public int read(byte[] b, int off, int len) throws IOException {
             synchronized (ZipFile.this) {
                 if (rem == 0) {
                     return -1;
@@ -465,7 +459,10 @@ public class ZipFile implements Closeable {
                 if (len > rem) {
                     len = (int) rem;
                 }
-                ensureOpenOrZipException();
+
+                if (jzip == 0) {
+                    throw new IOException("the object is not initialized.");
+                }
                 len = (int) ZipFile.readEntryBytes(jzf, b, off, len);
                 if (len > 0) {
                     rem -= len;
