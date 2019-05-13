@@ -34,7 +34,7 @@ set(PACKAGE "libzip")
 set(PACKAGE_NAME ${PACKAGE})
 set(PACKAGE_VERSION_MAJOR "1")
 set(PACKAGE_VERSION_MINOR "5")
-set(PACKAGE_VERSION_MICRO "1")
+set(PACKAGE_VERSION_MICRO "2")
 set(VERSION "${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}.${PACKAGE_VERSION_MICRO}")
 set(PACKAGE_VERSION ${VERSION})
 set(LIBZIP_VERSION ${PACKAGE_VERSION})
@@ -248,7 +248,7 @@ elseif(LONG_LONG_LIBZIP EQUAL 8)
 endif()
 
 
-# write out config virtualFile
+# write out config file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake-config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake-zipconf.h.in ${CMAKE_CURRENT_BINARY_DIR}/zipconf.h)
 
