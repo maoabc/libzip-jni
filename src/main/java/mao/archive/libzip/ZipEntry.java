@@ -24,6 +24,7 @@ public class ZipEntry {
     private final String comment;     // optional comment string for entry
 
 
+    @Keep
     public ZipEntry(long index, ZipCoder zc, byte[] name, long mtime, long crc, long size, long csize,
                     int method, int emethod, byte[] extra, byte[] comment) {
         this.index = index;

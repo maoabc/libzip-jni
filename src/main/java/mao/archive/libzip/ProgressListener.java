@@ -8,5 +8,6 @@ import androidx.annotation.Keep;
 
 @Keep
 public interface ProgressListener {
+    @Keep
     void onProgressing(int percent);
 }

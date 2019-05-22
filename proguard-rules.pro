@@ -15,4 +15,4 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
--keep class mao.archive.libzip.* {*;}
+#-keep class mao.archive.libzip.* {*;}
