@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(libzip)
 
-option(ENABLE_OPENSSL "Enable use of OpenSSL" ON)
+option(ENABLE_OPENSSL "Enable use of OpenSSL" OFF)
 option(ENABLE_COMMONCRYPTO "Enable use of CommonCrypto" OFF)
 
 
@@ -23,7 +23,7 @@ endif()
 set(GNUTLS_FOUND FALSE)
 
 if(ENABLE_OPENSSL)
-include(AndroidFindOpenssl.cmake)
+#include(AndroidFindOpenssl.cmake)
 else()
   set(OPENSSL_FOUND FALSE)
 endif()
