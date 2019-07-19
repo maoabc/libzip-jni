@@ -3,8 +3,7 @@
 //
 #include "lib/zip.h"
 #include <malloc.h>
-#include "jni_util.h"
-#include "jlong.h"
+#include <jni.h>
 #include "lib/zipint.h"
 #include "zip_file.h"
 
@@ -12,6 +11,21 @@
 static void initConstant(JNIEnv *env, jclass c, const char *fieldName, int value) {
     jfieldID field = (*env)->GetStaticFieldID(env, c, fieldName, "I");
     (*env)->SetStaticIntField(env, c, field, value);
+}
+
+static void ThrowByName(JNIEnv *env, const char *name, const char *msg) {
+    jclass cls = (*env)->FindClass(env, name);
+    if (cls != NULL) {
+        (*env)->ThrowNew(env, cls, msg);
+    }
+}
+
+static void ThrowIOException(JNIEnv *env, const char *msg) {
+    ThrowByName(env, "java/io/IOException", msg);
+}
+
+static void ThrowOutOfMemoryError(JNIEnv *env, const char *msg) {
+    ThrowByName(env, "java/lang/OutOfMemoryError", msg);
 }
 
 static jmethodID progress_method;
@@ -81,15 +95,15 @@ static jlong Java_mao_archive_libzip_ZipFile_open(JNIEnv *env, jclass cls, jstri
         zip_error_init_with_code(&error, err);
         const char *string = zip_error_strerror(&error);
         zip_error_fini(&error);
-        JNU_ThrowIOException(env, string);
+        ThrowIOException(env, string);
     }
     (*env)->ReleaseStringUTFChars(env, jname, name);
-    return ptr_to_jlong(za);
+    return (jlong) za;
 }
 
 static void Java_mao_archive_libzip_ZipFile_setDefaultPassword0
         (JNIEnv *env, jclass jcls, jlong jzip, jstring password) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     if (!password) {
         return;
     }
@@ -99,7 +113,7 @@ static void Java_mao_archive_libzip_ZipFile_setDefaultPassword0
     }
     if (zip_set_default_password(za, passwd) < 0) {
         zip_error_clear(za);
-        JNU_ThrowOutOfMemoryError(env, 0);
+        ThrowOutOfMemoryError(env, 0);
     }
 
     (*env)->ReleaseStringUTFChars(env, password, passwd);
@@ -107,7 +121,7 @@ static void Java_mao_archive_libzip_ZipFile_setDefaultPassword0
 
 static jstring Java_mao_archive_libzip_ZipFile_getDefaultPassword0
         (JNIEnv *env, jclass jcls, jlong jzip) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
 
     if (za->default_password) {
         return (*env)->NewStringUTF(env, za->default_password);
@@ -118,7 +132,7 @@ static jstring Java_mao_archive_libzip_ZipFile_getDefaultPassword0
 static jlong Java_mao_archive_libzip_ZipFile_getEntriesCount
         (JNIEnv *env, jclass cls, jlong jzip) {
 
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     zip_int64_t num_entries = zip_get_num_entries(za, 0);
     if (num_entries < 0) {
         LOGE("get entries count error %s", zip_strerror(za));
@@ -129,7 +143,7 @@ static jlong Java_mao_archive_libzip_ZipFile_getEntriesCount
 
 static jboolean Java_mao_archive_libzip_ZipFile_removeEntry0
         (JNIEnv *env, jclass cls, jlong jzip, jlong index) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     if (zip_delete(za, (zip_uint64_t) index) < 0) {
         LOGE("remove entry error %s", zip_strerror(za));
         zip_error_clear(za);
@@ -140,12 +154,11 @@ static jboolean Java_mao_archive_libzip_ZipFile_removeEntry0
 
 static jboolean Java_mao_archive_libzip_ZipFile_renameEntry
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jbyteArray jrawName) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *newName;
 
     newName = (char *) (*env)->GetByteArrayElements(env, jrawName, NULL);
     if (newName == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return JNI_FALSE;
     }
 
@@ -166,12 +179,11 @@ static jboolean Java_mao_archive_libzip_ZipFile_renameEntry
 static jlong Java_mao_archive_libzip_ZipFile_addFileEntry0
         (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName, jstring jpath, jlong off,
          jlong len) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *rawName;
 
     rawName = (char *) (*env)->GetByteArrayElements(env, jrawName, NULL);
     if (rawName == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return -1;
     }
 
@@ -197,14 +209,14 @@ static jlong Java_mao_archive_libzip_ZipFile_addFileEntry0
     err:
     (*env)->ReleaseByteArrayElements(env, jrawName, (jbyte *) rawName, JNI_ABORT);
     (*env)->ReleaseStringUTFChars(env, jpath, path);
-    JNU_ThrowIOException(env, zip_strerror(za));
+    ThrowIOException(env, zip_strerror(za));
     zip_error_clear(za);
     return -1;
 }
 
 static jlong Java_mao_archive_libzip_ZipFile_addBufferEntry0
         (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName, jbyteArray jdatabuf) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *rawName;
 
 
@@ -212,7 +224,6 @@ static jlong Java_mao_archive_libzip_ZipFile_addBufferEntry0
     //释放zip_source时会自动释放buf
     char *databuf = malloc((size_t) datalen);
     if (databuf == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return -1;
     }
     (*env)->GetByteArrayRegion(env, jdatabuf, 0, datalen, (jbyte *) databuf);
@@ -220,7 +231,7 @@ static jlong Java_mao_archive_libzip_ZipFile_addBufferEntry0
     rawName = (char *) (*env)->GetByteArrayElements(env, jrawName, NULL);
     if (rawName == NULL) {
         free(databuf);
-        JNU_ThrowOutOfMemoryError(env, 0);
+        ThrowOutOfMemoryError(env, 0);
         return -1;
     }
 
@@ -244,7 +255,7 @@ static jlong Java_mao_archive_libzip_ZipFile_addBufferEntry0
 
     (*env)->ReleaseByteArrayElements(env, jrawName, (jbyte *) rawName, JNI_ABORT);
 
-    JNU_ThrowIOException(env, zip_strerror(za));
+    ThrowIOException(env, zip_strerror(za));
     zip_error_clear(za);
     return -1;
 }
@@ -252,19 +263,18 @@ static jlong Java_mao_archive_libzip_ZipFile_addBufferEntry0
 
 static jlong Java_mao_archive_libzip_ZipFile_addDirectoryEntry0
         (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     zip_int64_t index;
     char *rawName;
 
     rawName = (char *) (*env)->GetByteArrayElements(env, jrawName, NULL);
     if (rawName == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return -1;
     }
 
     if ((index = zip_dir_add(za, rawName, 0)) < 0) {
 
-        JNU_ThrowIOException(env, zip_strerror(za));
+        ThrowIOException(env, zip_strerror(za));
         zip_error_clear(za);
 
     }
@@ -276,12 +286,11 @@ static jlong Java_mao_archive_libzip_ZipFile_addDirectoryEntry0
 
 static jlong Java_mao_archive_libzip_ZipFile_nameLocate0
         (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jrawName) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *rawName;
 
     rawName = (char *) (*env)->GetByteArrayElements(env, jrawName, NULL);
     if (rawName == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return -1;
     }
 
@@ -298,7 +307,7 @@ static jlong Java_mao_archive_libzip_ZipFile_nameLocate0
 
 static jobject Java_mao_archive_libzip_ZipFile_getEntry0
         (JNIEnv *env, jclass cls, jlong jzip, jobject zc, jlong index) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     const char *comment;
 
     zip_stat_t stat;
@@ -342,7 +351,7 @@ static jobject Java_mao_archive_libzip_ZipFile_getEntry0
 
 static jboolean Java_mao_archive_libzip_ZipFile_setModifyTime0
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jlong time) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     if (zip_file_set_mtime(za, (zip_uint64_t) index, (time_t) time, 0) < 0) {
         return JNI_FALSE;
     }
@@ -351,7 +360,7 @@ static jboolean Java_mao_archive_libzip_ZipFile_setModifyTime0
 
 static jboolean Java_mao_archive_libzip_ZipFile_setEncryptionMethod0
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jint em, jstring password) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
 
     const char *passwd = NULL;
     if (password != NULL) {
@@ -373,7 +382,7 @@ static jboolean Java_mao_archive_libzip_ZipFile_setEncryptionMethod0
 
 static jboolean Java_mao_archive_libzip_ZipFile_setCompressionMethod0
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jint cm, jint level) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     if (zip_set_file_compression(za, (zip_uint64_t) index, cm, (zip_uint32_t) level) < 0) {
         return JNI_FALSE;
     }
@@ -382,12 +391,11 @@ static jboolean Java_mao_archive_libzip_ZipFile_setCompressionMethod0
 
 static jboolean Java_mao_archive_libzip_ZipFile_setComment0
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jbyteArray jcomment) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *comm;
 
     comm = (char *) (*env)->GetByteArrayElements(env, jcomment, NULL);
     if (comm == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return JNI_FALSE;
     }
 
@@ -403,7 +411,7 @@ static jboolean Java_mao_archive_libzip_ZipFile_setComment0
 
 static jbyteArray Java_mao_archive_libzip_ZipFile_getZipComment0
         (JNIEnv *env, jclass cls, jlong jzip) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     const char *comment = NULL;
     int len = 0;
 
@@ -424,12 +432,11 @@ static jbyteArray Java_mao_archive_libzip_ZipFile_getZipComment0
 
 static jboolean Java_mao_archive_libzip_ZipFile_setZipComment0
         (JNIEnv *env, jclass cls, jlong jzip, jbyteArray jcomment) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     char *comm;
 
     comm = (char *) (*env)->GetByteArrayElements(env, jcomment, NULL);
     if (comm == NULL) {
-        JNU_ThrowOutOfMemoryError(env, 0);
         return JNI_FALSE;
     }
 
@@ -466,7 +473,7 @@ static jboolean Java_mao_archive_libzip_ZipFile_setZipComment0
 
 static jlong Java_mao_archive_libzip_ZipFile_openEntry
         (JNIEnv *env, jclass cls, jlong jzip, jlong index, jstring password) {
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
 
     char *passwd = NULL;
 
@@ -480,29 +487,29 @@ static jlong Java_mao_archive_libzip_ZipFile_openEntry
         switch (za->error.zip_err) {
             case ZIP_ER_WRONGPASSWD:
             case ZIP_ER_NOPASSWD: {
-                JNU_ThrowByNameWithLastError(env, "mao/archive/libzip/PasswordException",
+                ThrowByName(env, "mao/archive/libzip/PasswordException",
                                              zip_strerror(za));
                 break;
             }
             case ZIP_ER_COMPNOTSUPP:
             case ZIP_ER_ENCRNOTSUPP: {
-                JNU_ThrowByNameWithLastError(env, "java/util/zip/ZipException", zip_strerror(za));
+                ThrowByName(env, "java/util/zip/ZipException", zip_strerror(za));
                 break;
             }
             default:
-                JNU_ThrowIOExceptionWithLastError(env, zip_strerror(za));
+                ThrowIOException(env, zip_strerror(za));
         }
         zip_error_clear(za);
     }
     if (passwd != NULL) {
         (*env)->ReleaseStringUTFChars(env, password, passwd);
     }
-    return ptr_to_jlong(zf);
+    return (jlong) zf;
 }
 
 static jlong Java_mao_archive_libzip_ZipFile_readEntryBytes
         (JNIEnv *env, jclass cls, jlong jzf, jbyteArray bytes, jint off, jint len) {
-    zip_file_t *zf = jlong_to_ptr(jzf);
+    zip_file_t *zf = (zip_file_t *) jzf;
 
 #define BUFSIZE 8192
 
@@ -526,16 +533,16 @@ static jlong Java_mao_archive_libzip_ZipFile_readEntryBytes
 
 static void Java_mao_archive_libzip_ZipFile_closeEntry
         (JNIEnv *env, jclass cls, jlong jzf) {
-    zip_file_t *zf = jlong_to_ptr(jzf);
+    zip_file_t *zf = (zip_file_t *) jzf;
     if (zip_fclose(zf)) {
-        JNU_ThrowIOException(env, "close error");
+        ThrowIOException(env, "close error");
     }
 }
 
 static void Java_mao_archive_libzip_ZipFile_discard0
         (JNIEnv *env, jclass cls, jlong jzip) {
 //    LOGI("discard");
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     zip_discard(za);
 }
 
@@ -567,7 +574,7 @@ static void ud_free(void *vud) {
 static void Java_mao_archive_libzip_ZipFile_close0
         (JNIEnv *env, jclass cls, jlong jzip, jobject listener) {
     struct user_data data;
-    zip_t *za = jlong_to_ptr(jzip);
+    zip_t *za = (zip_t *) jzip;
     if (za == NULL) {
         return;
     }
@@ -578,7 +585,7 @@ static void Java_mao_archive_libzip_ZipFile_close0
     }
 
     if (zip_close(za) < 0) {
-        JNU_ThrowIOException(env, zip_strerror(za));
+        ThrowIOException(env, zip_strerror(za));
     }
 }
 

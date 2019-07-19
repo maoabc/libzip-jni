@@ -257,6 +257,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake-zipconf.h.in ${CMAKE_CURRENT_BI
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
 
 
-add_library(zip-jni SHARED zip_file.c jni_util.c register_native.c)
+add_library(zip-jni SHARED zip_file.c register_native.c)
 
 target_link_libraries(zip-jni zip zlib log)
